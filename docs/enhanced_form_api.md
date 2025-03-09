@@ -113,7 +113,7 @@
 ### cURL 示例
 
 ```bash
-curl -X POST "http://47.245.102.255:8000/forms/registrations/1/enhanced-data" \
+curl -X POST "http://localhost:8000/forms/registrations/1/enhanced-data" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -F 'form_request={"items":[{"field_id":1,"field_type":"text","content":"项目名称：创新项目"},{"field_id":2,"field_type":"image","content":"data:image/jpeg;base64,/9j/4AAQSkZJRg..."},{"field_id":3,"field_type":"file","content":null}]}' \
   -F "field_3=@/path/to/proposal.pdf"
@@ -174,7 +174,7 @@ files['form_request'] = (None, json.dumps(form_request), 'application/json')
 
 # 发送请求
 response = requests.post(
-    "http://47.245.102.255:8000/forms/registrations/1/enhanced-data",
+    "http://localhost:8000/forms/registrations/1/enhanced-data",
     headers=headers,
     files=files
 )
@@ -256,7 +256,7 @@ async function submitForm() {
     }
     
     // 发送请求
-    const response = await fetch("http://47.245.102.255:8000/forms/registrations/1/enhanced-data", {
+    const response = await fetch("http://localhost:8000/forms/registrations/1/enhanced-data", {
       method: "POST",
       headers: headers,
       body: formData
@@ -316,7 +316,7 @@ Future<void> submitEnhancedForm() async {
   // 创建multipart请求
   var request = http.MultipartRequest(
     'POST',
-    Uri.parse('http://47.245.102.255:8000/forms/registrations/1/enhanced-data')
+    Uri.parse('http://localhost:8000/forms/registrations/1/enhanced-data')
   );
   
   // 添加认证头
@@ -498,7 +498,7 @@ headers = {
 
 # 发送请求
 response = requests.get(
-    "http://47.245.102.255:8000/forms/registrations/1/enhanced-data",
+    "http://localhost:8000/forms/registrations/1/enhanced-data",
     headers=headers
 )
 

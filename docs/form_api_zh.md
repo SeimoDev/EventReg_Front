@@ -15,6 +15,14 @@
   - [文件上传和访问](#文件上传和访问)
     - [上传文件](#上传文件)
     - [访问文件](#访问文件)
+  - [日期类型字段](#日期类型字段)
+    - [创建日期类型字段](#创建日期类型字段)
+    - [提交日期类型字段数据](#提交日期类型字段数据)
+    - [响应示例](#响应示例)
+  - [带"其他"选项的单选字段](#带其他选项的单选字段)
+    - [创建带"其他"选项的单选字段](#创建带其他选项的单选字段)
+    - [提交带自定义内容的单选字段数据](#提交带自定义内容的单选字段数据)
+    - [响应示例](#响应示例-1)
 
 ## 获取用户活动报名信息
 
@@ -287,3 +295,178 @@ Authorization: Bearer <token>
 **响应：**
 - 成功时直接返回文件内容
 - 失败时返回错误信息 
+
+## 日期类型字段
+
+日期类型字段用于收集日期信息，如出生日期、活动日期等。
+
+### 创建日期类型字段
+
+```http
+POST /forms/fields
+```
+
+**请求头：**
+```
+Content-Type: application/json
+Authorization: Bearer <admin_token>
+```
+
+**请求体：**
+```json
+{
+    "competition_id": 1,
+    "field_name": "birth_date",
+    "field_label": "出生日期",
+    "field_type": "date",
+    "is_required": true
+}
+```
+
+### 提交日期类型字段数据
+
+提交日期数据时，使用ISO格式的日期字符串（YYYY-MM-DD）。
+
+```http
+POST /forms/registrations/{registration_id}/enhanced-data
+```
+
+**请求体示例：**
+```json
+{
+    "items": [
+        {
+            "field_id": 5,
+            "field_type": "date",
+            "content": "2000-01-01"
+        }
+    ]
+}
+```
+
+### 响应示例
+
+日期类型字段的值会以字符串形式返回：
+
+```json
+{
+    "id": 105,
+    "field_id": 5,
+    "field_name": "birth_date",
+    "field_label": "出生日期",
+    "type": "date",
+    "content": "2000-01-01"
+}
+```
+
+## 带"其他"选项的单选字段
+
+单选字段现在支持添加"其他"选项，允许用户在没有合适选项时输入自定义内容。
+
+### 创建带"其他"选项的单选字段
+
+```http
+POST /forms/fields
+```
+
+**请求头：**
+```
+Content-Type: application/json
+Authorization: Bearer <admin_token>
+```
+
+**请求体：**
+```json
+{
+    "competition_id": 1,
+    "field_name": "education",
+    "field_label": "最高学历",
+    "field_type": "radio",
+    "is_required": true,
+    "options": [
+        {"value": "high_school", "label": "高中"},
+        {"value": "bachelor", "label": "本科"},
+        {"value": "master", "label": "硕士"},
+        {"value": "doctor", "label": "博士"}
+    ],
+    "other_option": true
+}
+```
+
+### 提交带自定义内容的单选字段数据
+
+当用户选择"其他"选项时，可以提交一个包含自定义内容的对象。
+
+```http
+POST /forms/registrations/{registration_id}/enhanced-data
+```
+
+**提交预设选项时：**
+```json
+{
+    "items": [
+        {
+            "field_id": 6,
+            "field_type": "radio",
+            "content": "bachelor"
+        }
+    ]
+}
+```
+
+**提交自定义选项时：**
+```json
+{
+    "items": [
+        {
+            "field_id": 6,
+            "field_type": "radio",
+            "content": {
+                "other": true,
+                "value": "职业教育"
+            }
+        }
+    ]
+}
+```
+
+### 响应示例
+
+```json
+{
+    "field_id": 6,
+    "field_name": "education",
+    "field_label": "最高学历",
+    "type": "radio",
+    "content": {
+        "other": true,
+        "value": "职业教育"
+    },
+    "options": [
+        {"value": "high_school", "label": "高中"},
+        {"value": "bachelor", "label": "本科"},
+        {"value": "master", "label": "硕士"},
+        {"value": "doctor", "label": "博士"}
+    ],
+    "other_option": true
+}
+```
+
+或者对于选择了预设选项的情况：
+
+```json
+{
+    "field_id": 6,
+    "field_name": "education",
+    "field_label": "最高学历",
+    "type": "radio",
+    "content": "bachelor",
+    "options": [
+        {"value": "high_school", "label": "高中"},
+        {"value": "bachelor", "label": "本科"},
+        {"value": "master", "label": "硕士"},
+        {"value": "doctor", "label": "博士"}
+    ],
+    "other_option": true
+}
+``` 

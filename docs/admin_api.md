@@ -161,7 +161,7 @@ Authorization: Bearer <your_admin_token>
 **示例请求**：
 
 ```bash
-curl -X GET "http://47.245.102.255:9988/forms/admin/competitions/10/users/5/data" \
+curl -X GET "http://localhost:9988/forms/admin/competitions/10/users/5/data" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIiwiZXhwIjoxNjE2MjM5MDIyfQ.example_token"
 ```
 

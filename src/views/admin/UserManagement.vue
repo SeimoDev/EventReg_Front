@@ -24,9 +24,14 @@
         <el-option label="普通用户" value="user" />
       </el-select>
       
-      <el-button type="primary" @click="openBatchGenerateDialog">
-        批量生成账号
-      </el-button>
+      <div class="button-group">
+        <el-button type="danger" @click="confirmBatchDelete" :disabled="selectedUsers.length === 0">
+          批量删除
+        </el-button>
+        <el-button type="primary" @click="openBatchGenerateDialog">
+          批量生成账号
+        </el-button>
+      </div>
     </div>
     
     <!-- 用户列表 -->
@@ -37,7 +42,9 @@
         stripe
         border
         style="width: 100%"
+        @selection-change="handleSelectionChange"
       >
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="username" label="用户名" />
         <el-table-column prop="email" label="邮箱">
@@ -60,14 +67,28 @@
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="200">
+        <el-table-column label="操作" width="280">
           <template #default="scope">
+            <el-button
+              size="small"
+              type="primary"
+              @click="editUser(scope.row)"
+            >
+              编辑
+            </el-button>
             <el-button
               size="small"
               type="warning"
               @click="resetPassword(scope.row)"
             >
               重置密码
+            </el-button>
+            <el-button
+              size="small"
+              type="danger"
+              @click="confirmDeleteUser(scope.row)"
+            >
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -184,6 +205,95 @@
         </div>
       </div>
     </el-dialog>
+    
+    <!-- 编辑用户对话框 -->
+    <el-dialog
+      v-model="editUserDialogVisible"
+      title="编辑用户"
+      width="500px"
+    >
+      <el-form 
+        v-if="selectedUser" 
+        :model="editUserForm" 
+        :rules="editUserRules"
+        ref="editUserFormRef"
+        label-width="100px"
+      >
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="editUserForm.username" />
+        </el-form-item>
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="editUserForm.email" />
+        </el-form-item>
+        <el-form-item label="角色" prop="role">
+          <el-select v-model="editUserForm.role" style="width: 100%">
+            <el-option label="管理员" value="admin" />
+            <el-option label="普通用户" value="user" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="editUserForm.status" style="width: 100%">
+            <el-option label="正常" value="active" />
+            <el-option label="禁用" value="disabled" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="editUserDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleUpdateUser" :loading="updating">
+            保存
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+    
+    <!-- 删除用户确认对话框 -->
+    <el-dialog
+      v-model="deleteUserDialogVisible"
+      title="删除用户确认"
+      width="400px"
+    >
+      <p>确定要删除用户 "{{ selectedUser?.username }}" 吗？</p>
+      <p class="warning-text">此操作不可恢复，用户的所有数据将被永久删除！</p>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="deleteUserDialogVisible = false">取消</el-button>
+          <el-button type="danger" @click="handleDeleteUser" :loading="deleting">
+            确认删除
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+    
+    <!-- 批量删除确认对话框 -->
+    <el-dialog
+      v-model="batchDeleteDialogVisible"
+      title="批量删除用户确认"
+      width="500px"
+    >
+      <p>确定要删除选中的 {{ selectedUsers.length }} 个用户吗？</p>
+      <el-table :data="selectedUsers" border style="margin: 15px 0;">
+        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="username" label="用户名" />
+        <el-table-column prop="role" label="角色">
+          <template #default="scope">
+            <el-tag :type="scope.row.role === 'admin' ? 'danger' : 'success'">
+              {{ scope.row.role === 'admin' ? '管理员' : '普通用户' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+      <p class="warning-text">此操作不可恢复，所有选中用户的数据将被永久删除！</p>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="batchDeleteDialogVisible = false">取消</el-button>
+          <el-button type="danger" @click="handleBatchDelete" :loading="batchDeleting">
+            确认删除
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -256,6 +366,41 @@ const newPasswordDialogVisible = ref(false)
 const selectedUser = ref<User | null>(null)
 const newPassword = ref('')
 const resetting = ref(false)
+
+// 编辑用户相关
+const editUserDialogVisible = ref(false)
+const editUserFormRef = ref()
+const editUserForm = reactive({
+  username: '',
+  email: '',
+  role: '',
+  status: ''
+})
+const editUserRules = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 30, message: '长度在3到30个字符之间', trigger: 'blur' }
+  ],
+  email: [
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ],
+  role: [
+    { required: true, message: '请选择角色', trigger: 'change' }
+  ],
+  status: [
+    { required: true, message: '请选择状态', trigger: 'change' }
+  ]
+}
+const updating = ref(false)
+
+// 删除用户相关
+const deleteUserDialogVisible = ref(false)
+const deleting = ref(false)
+
+// 多选用户相关
+const selectedUsers = ref<User[]>([])
+const batchDeleteDialogVisible = ref(false)
+const batchDeleting = ref(false)
 
 // 初始化加载
 onMounted(() => {
@@ -490,6 +635,163 @@ const copyPassword = () => {
       ElMessage.error('复制失败，请手动复制')
     })
 }
+
+// 打开编辑用户对话框
+const editUser = (user: User) => {
+  selectedUser.value = user
+  
+  // 设置表单初始值
+  editUserForm.username = user.username
+  editUserForm.email = user.email || ''
+  editUserForm.role = user.role
+  editUserForm.status = user.status
+  
+  editUserDialogVisible.value = true
+}
+
+// 更新用户信息
+const handleUpdateUser = async () => {
+  if (!selectedUser.value) return
+  
+  // 表单验证
+  try {
+    await editUserFormRef.value.validate()
+  } catch (error) {
+    return
+  }
+  
+  updating.value = true
+  try {
+    console.log('开始更新用户，用户ID:', selectedUser.value.id, '更新数据:', editUserForm)
+    
+    const response = await request.put(`/user/admin/users/${selectedUser.value.id}`, {
+      username: editUserForm.username,
+      email: editUserForm.email,
+      role: editUserForm.role,
+      status: editUserForm.status
+    })
+    
+    console.log('更新用户响应:', response)
+    
+    ElMessage.success('用户信息更新成功')
+    editUserDialogVisible.value = false
+    
+    // 刷新用户列表
+    fetchUserList()
+  } catch (error) {
+    console.error('更新用户失败，详细错误:', {
+      error,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    ElMessage.error(`更新用户失败：${error instanceof Error ? error.message : '请检查网络连接'}`)
+  } finally {
+    updating.value = false
+  }
+}
+
+// 打开删除用户确认对话框
+const confirmDeleteUser = (user: User) => {
+  selectedUser.value = user
+  deleteUserDialogVisible.value = true
+}
+
+// 删除用户
+const handleDeleteUser = async () => {
+  if (!selectedUser.value) return
+  
+  deleting.value = true
+  try {
+    console.log('开始删除用户，用户ID:', selectedUser.value.id)
+    
+    await request.delete(`/user/admin/users/${selectedUser.value.id}`)
+    
+    ElMessage.success('用户删除成功')
+    deleteUserDialogVisible.value = false
+    
+    // 刷新用户列表
+    fetchUserList()
+  } catch (error) {
+    console.error('删除用户失败，详细错误:', {
+      error,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    ElMessage.error(`删除用户失败：${error instanceof Error ? error.message : '请检查网络连接'}`)
+  } finally {
+    deleting.value = false
+  }
+}
+
+// 处理表格多选变化
+const handleSelectionChange = (selection: User[]) => {
+  selectedUsers.value = selection
+  console.log('已选中的用户:', selectedUsers.value.map(user => user.id))
+}
+
+// 打开批量删除确认对话框
+const confirmBatchDelete = () => {
+  if (selectedUsers.value.length === 0) {
+    ElMessage.warning('请先选择要删除的用户')
+    return
+  }
+  
+  batchDeleteDialogVisible.value = true
+}
+
+// 批量删除用户
+const handleBatchDelete = async () => {
+  if (selectedUsers.value.length === 0) {
+    ElMessage.warning('没有选中的用户')
+    return
+  }
+  
+  batchDeleting.value = true
+  try {
+    const userIds = selectedUsers.value.map(user => user.id)
+    console.log('开始批量删除用户，用户ID列表:', userIds)
+    
+    // 显示进度消息
+    ElMessage.info(`开始批量删除 ${selectedUsers.value.length} 个用户...`)
+    
+    // 定义计数器
+    let successCount = 0
+    let failCount = 0
+    
+    // 逐个删除用户
+    for (const user of selectedUsers.value) {
+      try {
+        console.log(`删除用户 ${user.id} (${user.username})`)
+        await request.delete(`/user/admin/users/${user.id}`)
+        successCount++
+      } catch (err) {
+        console.error(`用户 ${user.id} (${user.username}) 删除失败:`, err)
+        failCount++
+      }
+    }
+    
+    // 根据结果显示不同的消息
+    if (failCount === 0) {
+      ElMessage.success(`成功删除 ${successCount} 个用户`)
+    } else {
+      ElMessage.warning(`操作完成：${successCount} 个用户删除成功，${failCount} 个用户删除失败`)
+    }
+    
+    batchDeleteDialogVisible.value = false
+    
+    // 刷新用户列表
+    fetchUserList()
+  } catch (error) {
+    console.error('批量删除用户失败，详细错误:', {
+      error,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    ElMessage.error(`批量删除用户失败：${error instanceof Error ? error.message : '请检查网络连接'}`)
+  } finally {
+    batchDeleting.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -506,10 +808,17 @@ const copyPassword = () => {
   display: flex;
   margin-bottom: 20px;
   gap: 15px;
+  justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .search-input {
   width: 300px;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
 }
 
 .user-list-card {
