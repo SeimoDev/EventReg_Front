@@ -1,0 +1,50 @@
+Date : 2025-03-09 15:11:04
+Directory : d:\Project\EventReg\Frontend
+Total : 13 files,  2889 codes, 284 comments, 554 blanks, all 3727 lines
+
+Languages
++------------+------------+------------+------------+------------+------------+
+| language   | files      | code       | comment    | blank      | total      |
++------------+------------+------------+------------+------------+------------+
+| Vue        |          7 |      1,680 |        283 |        303 |      2,266 |
+| Markdown   |          4 |      1,197 |          0 |        250 |      1,447 |
+| TypeScript |          1 |         10 |          1 |          1 |         12 |
+| JSON       |          1 |          2 |          0 |          0 |          2 |
++------------+------------+------------+------------+------------+------------+
+
+Directories
++--------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                     | files      | code       | comment    | blank      | total      |
++--------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                        |         13 |      2,889 |        284 |        554 |      3,727 |
+| . (Files)                                                                |          1 |          2 |          0 |          0 |          2 |
+| docs                                                                     |          4 |      1,197 |          0 |        250 |      1,447 |
+| src                                                                      |          8 |      1,690 |        284 |        304 |      2,278 |
+| src\components                                                           |          1 |        249 |         31 |         40 |        320 |
+| src\components\admin                                                     |          1 |        249 |         31 |         40 |        320 |
+| src\router                                                               |          1 |         10 |          1 |          1 |         12 |
+| src\views                                                                |          6 |      1,431 |        252 |        263 |      1,946 |
+| src\views (Files)                                                        |          2 |          9 |          4 |          6 |         19 |
+| src\views\admin                                                          |          2 |         52 |          6 |          9 |         67 |
+| src\views\competition                                                    |          2 |      1,370 |        242 |        248 |      1,860 |
++--------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++--------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| filename                                                                 | language   | code       | comment    | blank      | total      |
++--------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| d:\Project\EventReg\Frontend\docs\export_api.md                          | Markdown   |        172 |          0 |         42 |        214 |
+| d:\Project\EventReg\Frontend\docs\export_examples.md                     | Markdown   |        412 |          0 |         66 |        478 |
+| d:\Project\EventReg\Frontend\docs\file_upload_api.md                     | Markdown   |        183 |          0 |         49 |        232 |
+| d:\Project\EventReg\Frontend\docs\form_api.md                            | Markdown   |        430 |          0 |         93 |        523 |
+| d:\Project\EventReg\Frontend\src\components\admin\ExportDialog.vue       | Vue        |        249 |         31 |         40 |        320 |
+| d:\Project\EventReg\Frontend\src\router\index.ts                         | TypeScript |         10 |          1 |          1 |         12 |
+| d:\Project\EventReg\Frontend\src\views\Home.vue                          | Vue        |        -47 |         -1 |         -1 |        -49 |
+| d:\Project\EventReg\Frontend\src\views\NotFound.vue                      | Vue        |         56 |          5 |          7 |         68 |
+| d:\Project\EventReg\Frontend\src\views\admin\CompetitionList.vue         | Vue        |         26 |          3 |          4 |         33 |
+| d:\Project\EventReg\Frontend\src\views\admin\CompetitionManagement.vue   | Vue        |         26 |          3 |          5 |         34 |
+| d:\Project\EventReg\Frontend\src\views\competition\CompetitionDetail.vue | Vue        |         39 |          7 |          9 |         55 |
+| d:\Project\EventReg\Frontend\src\views\competition\RegistrationForm.vue  | Vue        |      1,331 |        235 |        239 |      1,805 |
+| d:\Project\EventReg\Frontend\tsconfig.app.json                           | JSON       |          2 |          0 |          0 |          2 |
+| Total                                                                    |            |      2,889 |        284 |        554 |      3,727 |
++--------------------------------------------------------------------------+------------+------------+------------+------------+------------+
