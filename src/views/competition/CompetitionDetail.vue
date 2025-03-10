@@ -172,7 +172,7 @@ const registrationStatusText = computed(() => {
 const getActionButtonText = () => {
   // 未登录状态
   if (!userStore.token) {
-    return '立即提交';
+    return '点击填写报名信息';
   }
   
   // 已登录，根据报名状态显示不同文本
@@ -196,7 +196,7 @@ const getActionButtonText = () => {
   }
   
   // 未报名状态
-  return '立即提交';
+  return '点击填写报名信息';
 }
 
 onMounted(() => {

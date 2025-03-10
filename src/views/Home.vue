@@ -103,7 +103,7 @@ onMounted(() => {
                   :to="'/competition/' + competition.id" 
                   class="inline-flex items-center text-primary-600 hover:text-primary-500"
                 >
-                  查看详情
+                  立即报名参加活动
                   <el-icon class="ml-1"><ArrowRight /></el-icon>
                 </router-link>
               </div>

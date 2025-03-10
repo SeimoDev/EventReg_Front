@@ -8,6 +8,7 @@ import type { FormInstance, FormRules, UploadUserFile, UploadRawFile } from 'ele
 import { Upload, Plus, Loading } from '@element-plus/icons-vue'
 import { ElUpload } from 'element-plus'
 import { Trophy } from '@element-plus/icons-vue'
+import { ElDatePicker } from 'element-plus'
 
 // 基本字段ID常量
 const TEAM_NAME_FIELD_ID = 1
@@ -28,6 +29,9 @@ interface FormField {
     [key: string]: any
   }>
   sort_order?: number
+  allow_multiple?: boolean
+  other_option?: boolean
+  allow_custom_options?: boolean
 }
 
 // 辅助函数，检查options是否有accepted_formats属性
@@ -1387,7 +1391,7 @@ const submitForm = async () => {
           throw new Error(`文件字段"${field.field_label}"为必填项`);
       }
       } else {
-        // 文本或单选字段
+        // 文本、单选或日期字段
         if (fieldValue) {
           formItems.push({
             field_id: fieldId,
@@ -1460,9 +1464,9 @@ const submitForm = async () => {
 
 // 重置表单数据（重命名以避免冲突）
 const resetFormData = () => {
-  // 清空文本和单选字段
+  // 清空文本、单选和日期字段
   for (const field of formFields.value) {
-    if (field.field_type === 'text' || field.field_type === 'radio') {
+    if (field.field_type === 'text' || field.field_type === 'radio' || field.field_type === 'date') {
       formData.value[`field_${field.id}`] = '';
     }
   }
@@ -1714,6 +1718,300 @@ watch(() => route.query, async (newQuery) => {
     checkEditModeRequests();
   }
 }, { immediate: true, deep: true });
+
+// 添加以下数据属性
+const customOptions = reactive<Record<number, Array<{text: string, selected: boolean}>>>({})
+const otherOptions = reactive<Record<number, {selected: boolean, text: string}>>({})
+const newCustomOption = reactive<Record<number, string>>({})
+const errors = reactive<Record<number, string>>({})
+const _multipleSelectionResult = reactive<Record<number, any[]>>({})
+
+// 获取字段选项
+const getFieldOptions = (field: any) => {
+  if (!field.options) return []
+  
+  if (typeof field.options === 'string') {
+    try {
+      return JSON.parse(field.options)
+    } catch (e) {
+      console.error('解析选项失败:', e)
+      return []
+    }
+  }
+  
+  if (Array.isArray(field.options)) {
+    return field.options
+  }
+  
+  return []
+}
+
+// 添加自定义选项 - 修改
+const addCustomOption = (fieldId: number) => {
+  const text = newCustomOption[fieldId]?.trim()
+  if (!text) return
+  
+  const field = formFields.value.find((f: any) => f.id === fieldId)
+  
+  // 检查是否已存在相同选项
+  const existingOptions = getFieldOptions(field)
+  const exists = existingOptions.some((opt: any) => opt.label === text || opt.value === text)
+  const customExists = (customOptions[fieldId] || []).some(opt => opt.text === text)
+  
+  if (exists || customExists) {
+    ElMessage.warning('该选项已存在')
+    return
+  }
+  
+  // 初始化自定义选项数组（如果不存在）
+  if (!customOptions[fieldId]) {
+    customOptions[fieldId] = []
+  }
+  
+  // 添加自定义选项
+  customOptions[fieldId].push({ text, selected: false })
+  
+  // 清空输入
+  newCustomOption[fieldId] = ''
+  
+  // 更新表单数据
+  if (field?.allow_multiple) {
+    // 添加到多选数组
+    if (!multiSelectValues[fieldId]) {
+      multiSelectValues[fieldId] = []
+    }
+    multiSelectValues[fieldId].push(text)
+    // 同步到表单数据
+    formData[fieldId] = [...multiSelectValues[fieldId]]
+  } else {
+    // 单选模式自动选中新添加的选项
+    formData[fieldId] = text
+  }
+}
+
+// 更新多选数据数组
+const updateMultipleSelectionArray = (fieldId: number) => {
+  const field = formFields.value.find((f: any) => f.id === fieldId)
+  if (!field || !field.allow_multiple) return
+  
+  // 初始化结果数组
+  const resultArray: any[] = []
+  
+  // 添加选中的预设选项
+  const fieldData = formData[fieldId] || {}
+  if (typeof fieldData === 'object' && !Array.isArray(fieldData)) {
+    Object.keys(fieldData).forEach(key => {
+      if (fieldData[key]) {
+        resultArray.push(key)
+      }
+    })
+  } else if (Array.isArray(fieldData)) {
+    fieldData.forEach(item => {
+      resultArray.push(item)
+    })
+  }
+  
+  // 添加选中的自定义选项
+  (customOptions[fieldId] || []).forEach(option => {
+    if (option.selected) {
+      resultArray.push(option.text)
+    }
+  })
+  
+  // 添加"其他"选项
+  if (field.other_option && otherOptions[fieldId]?.selected) {
+    // 直接添加用户输入的文本，而不是other值
+    if (otherOptions[fieldId].text) {
+      resultArray.push(otherOptions[fieldId].text)
+    }
+  }
+  
+  // 存储结果
+  _multipleSelectionResult[fieldId] = resultArray
+}
+
+// 添加多选值存储
+const multiSelectValues = reactive<Record<number, string[]>>({})
+
+// 初始化多选框已选值
+const initializeMultiSelectValues = () => {
+  formFields.value.forEach(field => {
+    if (field.allow_multiple && formData.value[`field_${field.id}`]) {
+      // 将表单数据中的值同步到multiSelectValues
+      multiSelectValues[field.id] = formData.value[`field_${field.id}`] || []
+      
+      // 确保customOptions中包含所有已选项
+      if (multiSelectValues[field.id].length > 0) {
+        if (!customOptions[field.id]) {
+          customOptions[field.id] = []
+        }
+        
+        // 获取预设选项值
+        const existingOptions = getRadioOptions(field).map(opt => opt.value)
+        
+        // 找出自定义的选项
+        const customVals = multiSelectValues[field.id].filter(val => 
+          val !== 'other' && !existingOptions.includes(val)
+        )
+        
+        // 添加到自定义选项
+        customVals.forEach(val => {
+          if (!customOptions[field.id].some(opt => opt.text === val)) {
+            customOptions[field.id].push({ text: val, selected: true })
+          }
+        })
+      }
+    }
+  })
+}
+
+// 处理多选变化
+const handleMultiSelectChange = (fieldId: number, values: string[]) => {
+  // 更新多选值
+  multiSelectValues[fieldId] = values || []
+  
+  // 将多选值同步到表单数据
+  formData.value[`field_${fieldId}`] = values
+  
+  // 处理新创建的选项
+  if (values) {
+    // 获取当前已存在的选项值(包括预设选项和自定义选项)
+    const field = formFields.value.find(f => f.id === fieldId)
+    const existingOptions = [
+      ...getRadioOptions(field).map(opt => opt.value),
+      ...(customOptions[fieldId] || []).map(opt => opt.text)
+    ]
+    
+    // 查找新添加的选项
+    const newOptions = values.filter(val => 
+      val !== 'other' && !existingOptions.includes(val)
+    )
+    
+    // 将新选项添加到自定义选项列表
+    if (newOptions.length > 0) {
+      if (!customOptions[fieldId]) {
+        customOptions[fieldId] = []
+      }
+      
+      newOptions.forEach(newOpt => {
+        if (!customOptions[fieldId].some(opt => opt.text === newOpt)) {
+          customOptions[fieldId].push({ text: newOpt, selected: true })
+        }
+      })
+    }
+  }
+  
+  // 如果values中不包含other，清空其他选项
+  if (!values.includes('other')) {
+    otherOptions[fieldId] = { selected: false, text: '' }
+  }
+}
+
+// 初始化表单控件数据 - 修改
+const initFormControls = () => {
+  formFields.value.forEach((field: any) => {
+    const fieldId = field.id
+    
+    // 初始化多选/单选字段
+    if (field.field_type === 'radio') {
+      if (field.allow_multiple) {
+        // 初始化多选值为空数组
+        multiSelectValues[fieldId] = []
+        // 确保表单数据也初始化为数组
+        formData.value[`field_${fieldId}`] = formData.value[`field_${fieldId}`] || []
+      }
+      
+      // 初始化其他选项
+      otherOptions[fieldId] = { selected: false, text: '' }
+      
+      // 初始化自定义选项数组
+      customOptions[fieldId] = []
+      // 初始化新的自定义选项输入
+      newCustomOption[fieldId] = ''
+    }
+  })
+}
+
+// 在组件挂载后初始化表单控件
+onMounted(() => {
+  // ... 现有代码 ...
+  initFormControls()
+  // 初始化多选框已选值
+  initializeMultiSelectValues()
+})
+
+// 添加自定义输入选项的方法
+const addCustomInputOption = (fieldId: number, query: string) => {
+  if (!query.trim()) return
+  
+  const text = query.trim()
+  const field = formFields.value.find((f: any) => f.id === fieldId)
+  
+  // 检查是否已存在相同选项
+  const existingOptions = getFieldOptions(field)
+  const exists = existingOptions.some((opt: any) => opt.label === text || opt.value === text)
+  const customExists = (customOptions[fieldId] || []).some(opt => opt.text === text)
+  
+  if (exists || customExists) {
+    ElMessage.warning('该选项已存在')
+    return
+  }
+  
+  // 初始化自定义选项数组（如果不存在）
+  if (!customOptions[fieldId]) {
+    customOptions[fieldId] = []
+  }
+  
+  // 添加自定义选项
+  customOptions[fieldId].push({ text, selected: field?.allow_multiple || false })
+  
+  // 设置选中值
+  if (field?.allow_multiple) {
+    // 多选模式，添加到选中项
+    if (!formData[fieldId]) formData[fieldId] = {}
+    formData[fieldId][text] = true
+    updateMultipleSelectionArray(fieldId)
+  } else {
+    // 单选模式，直接设置为选中值
+    formData[fieldId] = text
+  }
+}
+
+// 准备表单数据提交
+const prepareFormData = () => {
+  const formItems = []
+  
+  formFields.value.forEach((field: any) => {
+    let fieldValue = formData[field.id]
+    
+    // 处理多选字段的"其他"选项
+    if (field.field_type === 'radio' && field.allow_multiple && fieldValue?.includes('other')) {
+      // 复制数组，避免修改原始数据
+      const valuesCopy = [...fieldValue]
+      // 找到"other"的索引并替换为用户输入的文本
+      const otherIndex = valuesCopy.indexOf('other')
+      if (otherIndex >= 0 && otherOptions[field.id]?.text) {
+        // 直接用输入的文本替换"other"
+        valuesCopy[otherIndex] = otherOptions[field.id].text
+      }
+      fieldValue = valuesCopy
+    }
+    
+    // 处理单选模式下的"其他"选项
+    if (field.field_type === 'radio' && !field.allow_multiple && fieldValue === 'other') {
+      // 直接设置为用户输入的文本
+      fieldValue = otherOptions[field.id]?.text || ''
+    }
+    
+    formItems.push({
+      field_id: field.id,
+      field_type: field.field_type,
+      field_value: fieldValue
+    })
+  })
+  
+  return { form_items: formItems }
+}
 </script>
 
 <template>
@@ -1823,31 +2121,93 @@ watch(() => route.query, async (newQuery) => {
           ></el-input>
             </el-form-item>
 
-        <!-- 单选字段（下拉选择框形式） -->
-            <el-form-item
-              v-else-if="field.field_type === 'radio'"
-              :label="field.field_label"
-              :prop="'field_' + field.id"
-            >
-              <el-select 
-                v-model="formData['field_' + field.id]" 
-                filterable 
-                :placeholder="`请选择${field.field_label}`"
-                style="width: 100%;"
-                clearable
+        <!-- 单选/多选字段 -->
+            <template v-if="field.field_type === 'radio'">
+              <el-form-item
+                :label="field.field_label"
+                :prop="`field_${field.id}`"
+                :rules="field.is_required ? {required: true, message: `请选择${field.field_label}`, trigger: 'change'} : {}"
               >
-                <el-option
-                  value=""
-                  :label="`请选择${field.field_label}`"
-                />
-                <el-option
-                  v-for="option in getRadioOptions(field)"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
-                />
-              </el-select>
-            </el-form-item>
+                <!-- 多选模式 -->
+                <template v-if="field.allow_multiple">
+                  <el-select
+                    v-model="multiSelectValues[field.id]"
+                    multiple
+                    filterable
+                    :allow-create="field.allow_custom_options"
+                    default-first-option
+                    :multiple-limit="0"
+                    style="width: 100%"
+                    :placeholder="`请选择${field.field_label}`"
+                    @change="(val) => handleMultiSelectChange(field.id, val)"
+                  >
+                    <el-option
+                      v-for="option in getRadioOptions(field)"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                    
+                    <!-- 自定义选项 -->
+                    <el-option
+                      v-for="(customOption, index) in customOptions[field.id]"
+                      :key="`custom-${index}`"
+                      :label="customOption.text"
+                      :value="customOption.text"
+                    />
+                    
+                    <!-- "其他"选项 -->
+                    <el-option v-if="field.other_option" label="其他" value="other" />
+                  </el-select>
+                  
+                  <!-- "其他"选项的输入框 -->
+                  <el-input
+                    v-if="field.other_option && multiSelectValues[field.id]?.includes('other')"
+                    v-model="otherOptions[field.id]"
+                    placeholder="请说明其他选项内容"
+                    class="mt-2"
+                  />
+                </template>
+                
+                <!-- 单选模式 - 下拉列表 -->
+                <template v-else>
+                  <el-select
+                    v-model="formData[`field_${field.id}`]"
+                    filterable
+                    :allow-create="field.allow_custom_options"
+                    default-first-option
+                    style="width: 100%"
+                    :placeholder="`请选择${field.field_label}`"
+                  >
+                    <el-option
+                      v-for="option in getRadioOptions(field)"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                    
+                    <!-- 自定义选项 -->
+                    <el-option
+                      v-for="(customOption, index) in customOptions[field.id]"
+                      :key="`custom-${index}`"
+                      :label="customOption.text"
+                      :value="customOption.text"
+                    />
+                    
+                    <!-- "其他"选项 -->
+                    <el-option v-if="field.other_option" label="其他" value="other" />
+                  </el-select>
+                  
+                  <!-- "其他"选项的输入框 -->
+                  <el-input
+                    v-if="field.other_option && formData[`field_${field.id}`] === 'other'"
+                    v-model="otherOptions[field.id]"
+                    placeholder="请说明其他选项内容"
+                    class="mt-2"
+                  />
+                </template>
+              </el-form-item>
+            </template>
 
         <!-- 图片上传 -->
             <el-form-item
@@ -1903,12 +2263,29 @@ watch(() => route.query, async (newQuery) => {
                 </template>
               </el-upload>
               </el-form-item>
+
+          <!-- 日期字段 -->
+              <el-form-item
+                v-else-if="field.field_type === 'date'"
+                :label="field.field_label"
+                :prop="`field_${field.id}`"
+                :rules="field.is_required ? {required: true, message: `请选择${field.field_label}`, trigger: 'change'} : {}"
+              >
+                <el-date-picker
+                  v-model="formData[`field_${field.id}`]"
+                  type="date"
+                  :placeholder="`请选择${field.field_label}`"
+                  format="YYYY-MM-DD"
+                  value-format="YYYY-MM-DD"
+                  style="width: 100%"
+                />
+              </el-form-item>
           </template>
           
           <!-- 提交按钮 -->
       <el-form-item>
-        <el-button type="primary" @click="submitForm" :loading="loading">提交报名</el-button>
-        <el-button @click="resetForm">重置</el-button>
+        <el-button type="primary" @click="submitForm" :loading="submitting">提交报名</el-button>
+        <el-button @click="resetForm" :disabled="submitting">重置</el-button>
       </el-form-item>
         </el-form>
   </div>

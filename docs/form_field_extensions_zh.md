@@ -1,26 +1,319 @@
 # 表单字段扩展功能文档
 
-本文档详细说明了表单系统的两个重要扩展功能：**日期类型字段**和**带"其他"选项的单选字段**。
+本文档详细说明了表单系统的扩展功能：**单选多选切换**、**允许选中'其他'并填写理由**、**允许用户添加自定义选项**和**日期类型字段**。
 
 ## 目录
 - [表单字段扩展功能文档](#表单字段扩展功能文档)
   - [目录](#目录)
+  - [单选/多选切换功能](#单选多选切换功能)
+    - [创建支持多选的单选字段（管理接口）](#创建支持多选的单选字段管理接口)
+    - [更新单选/多选设置（管理接口）](#更新单选多选设置管理接口)
+    - [提交多选数据（enhanced-data接口）](#提交多选数据enhanced-data接口)
+    - [获取多选数据（enhanced-data接口）](#获取多选数据enhanced-data接口)
+  - [自定义选项功能](#自定义选项功能)
+    - ['其他'选项填写理由功能](#其他选项填写理由功能)
+    - [允许用户添加自定义选项功能](#允许用户添加自定义选项功能)
   - [日期类型字段](#日期类型字段)
     - [创建日期类型字段（管理接口）](#创建日期类型字段管理接口)
     - [更新日期类型字段（管理接口）](#更新日期类型字段管理接口)
     - [提交日期类型字段数据（enhanced-data接口）](#提交日期类型字段数据enhanced-data接口)
     - [获取日期类型字段数据（enhanced-data接口）](#获取日期类型字段数据enhanced-data接口)
     - [日期格式验证](#日期格式验证)
-  - [带"其他"选项的单选字段](#带其他选项的单选字段)
-    - [创建带"其他"选项的单选字段（管理接口）](#创建带其他选项的单选字段管理接口)
-    - [更新带"其他"选项的单选字段（管理接口）](#更新带其他选项的单选字段管理接口)
-    - [提交带"其他"选项的单选字段数据（enhanced-data接口）](#提交带其他选项的单选字段数据enhanced-data接口)
-    - [获取带"其他"选项的单选字段数据（enhanced-data接口）](#获取带其他选项的单选字段数据enhanced-data接口)
   - [与活动表单管理的集成](#与活动表单管理的集成)
     - [获取活动所有字段（管理接口）](#获取活动所有字段管理接口)
     - [获取活动所有表单数据（管理接口）](#获取活动所有表单数据管理接口)
   - [数据库结构变更](#数据库结构变更)
   - [前端实现建议](#前端实现建议)
+    - [单选/多选字段实现](#单选多选字段实现)
+    - [日期字段实现](#日期字段实现)
+    - [表单管理界面的更新](#表单管理界面的更新)
+
+## 单选/多选切换功能
+
+单选字段现在支持多选模式，通过设置`allow_multiple`属性为`true`来启用。在多选模式下，用户可以选择多个选项，字段值将保存为数组。
+
+### 创建支持多选的单选字段（管理接口）
+
+```http
+POST /forms/fields
+```
+
+**请求头：**
+```
+Content-Type: application/json
+Authorization: Bearer <admin_token>
+```
+
+**请求体：**
+```json
+{
+    "competition_id": 1,
+    "field_name": "interests",
+    "field_label": "兴趣爱好",
+    "field_type": "radio",
+    "is_required": true,
+    "allow_multiple": true,
+    "options": [
+        {"value": "sports", "label": "体育运动"},
+        {"value": "music", "label": "音乐"},
+        {"value": "reading", "label": "阅读"},
+        {"value": "travel", "label": "旅行"},
+        {"value": "cooking", "label": "烹饪"}
+    ]
+}
+```
+
+**成功响应 (200 OK)**
+```json
+{
+    "id": 10
+}
+```
+
+### 更新单选/多选设置（管理接口）
+
+```http
+PUT /forms/fields/{field_id}
+```
+
+**请求头：**
+```
+Content-Type: application/json
+Authorization: Bearer <admin_token>
+```
+
+**请求体：**
+```json
+{
+    "allow_multiple": true
+}
+```
+
+**成功响应 (200 OK)**
+```json
+{
+    "success": true
+}
+```
+
+### 提交多选数据（enhanced-data接口）
+
+在多选模式下，表单字段的值应该是一个数组，包含所有选中的选项值。
+
+```http
+POST /forms/registrations/{registration_id}/enhanced-data
+```
+
+**请求头：**
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**请求体：**
+```json
+{
+    "form_items": [
+        {
+            "field_id": 10,
+            "field_type": "radio",
+            "field_value": ["sports", "music", "travel"]
+        }
+    ]
+}
+```
+
+**成功响应 (200 OK)**
+```json
+{
+    "success": true,
+    "message": "表单数据保存成功",
+    "saved_items": [
+        {
+            "field_id": 10,
+            "type": "radio",
+            "value": ["sports", "music", "travel"]
+        }
+    ]
+}
+```
+
+### 获取多选数据（enhanced-data接口）
+
+```http
+GET /forms/registrations/{registration_id}/enhanced-data
+```
+
+**请求头：**
+```
+Authorization: Bearer <token>
+```
+
+**成功响应 (200 OK)**
+```json
+{
+    "success": true,
+    "registration": {
+        "id": 5,
+        "competition_id": 1,
+        "competition_name": "创新设计大赛",
+        "status": "pending",
+        "created_at": "2023-10-15T10:00:00"
+    },
+    "form_data": [
+        {
+            "field_id": 10,
+            "field_name": "interests",
+            "field_label": "兴趣爱好",
+            "type": "radio",
+            "content": ["sports", "music", "travel"],
+            "options": [
+                {"value": "sports", "label": "体育运动"},
+                {"value": "music", "label": "音乐"},
+                {"value": "reading", "label": "阅读"},
+                {"value": "travel", "label": "旅行"},
+                {"value": "cooking", "label": "烹饪"}
+            ],
+            "allow_multiple": true
+        }
+    ]
+}
+```
+
+## 自定义选项功能
+
+### '其他'选项填写理由功能
+
+单选字段可以通过设置`other_option`属性为`true`来启用'其他'选项，允许用户选择'其他'并填写自定义理由。
+
+```http
+POST /forms/fields
+```
+
+**请求头：**
+```
+Content-Type: application/json
+Authorization: Bearer <admin_token>
+```
+
+**请求体：**
+```json
+{
+    "competition_id": 1,
+    "field_name": "education",
+    "field_label": "最高学历",
+    "field_type": "radio",
+    "is_required": true,
+    "other_option": true,
+    "options": [
+        {"value": "high_school", "label": "高中"},
+        {"value": "bachelor", "label": "本科"},
+        {"value": "master", "label": "硕士"},
+        {"value": "doctor", "label": "博士"}
+    ]
+}
+```
+
+**成功响应 (200 OK)**
+```json
+{
+    "id": 11
+}
+```
+
+当用户选择'其他'选项时，提交的数据格式如下：
+
+```http
+POST /forms/registrations/{registration_id}/enhanced-data
+```
+
+**请求体：**
+```json
+{
+    "form_items": [
+        {
+            "field_id": 11,
+            "field_type": "radio",
+            "field_value": {
+                "value": "other",
+                "custom_text": "专科"
+            }
+        }
+    ]
+}
+```
+
+### 允许用户添加自定义选项功能
+
+单选字段可以通过设置`allow_custom_options`属性为`true`来启用自定义选项，允许用户添加系统中不存在的选项。
+
+```http
+POST /forms/fields
+```
+
+**请求头：**
+```
+Content-Type: application/json
+Authorization: Bearer <admin_token>
+```
+
+**请求体：**
+```json
+{
+    "competition_id": 1,
+    "field_name": "profession",
+    "field_label": "职业",
+    "field_type": "radio",
+    "is_required": true,
+    "allow_custom_options": true,
+    "options": [
+        {"value": "engineer", "label": "工程师"},
+        {"value": "doctor", "label": "医生"},
+        {"value": "teacher", "label": "教师"},
+        {"value": "designer", "label": "设计师"}
+    ]
+}
+```
+
+**成功响应 (200 OK)**
+```json
+{
+    "id": 12
+}
+```
+
+当用户添加自定义选项时，提交的数据格式如下：
+
+```http
+POST /forms/registrations/{registration_id}/enhanced-data
+```
+
+**请求体：**
+```json
+{
+    "form_items": [
+        {
+            "field_id": 12,
+            "field_type": "radio",
+            "field_value": "programmer"
+        }
+    ]
+}
+```
+
+当同时启用多选和自定义选项时，用户可以提交包含系统选项和自定义选项的数组：
+
+```json
+{
+    "form_items": [
+        {
+            "field_id": 12,
+            "field_type": "radio",
+            "field_value": ["engineer", "programmer", "system_architect"]
+        }
+    ]
+}
+```
 
 ## 日期类型字段
 
@@ -52,7 +345,7 @@ Authorization: Bearer <admin_token>
 **成功响应 (200 OK)**
 ```json
 {
-    "id": 5
+    "id": 13
 }
 ```
 
@@ -72,7 +365,7 @@ Authorization: Bearer <admin_token>
 ```json
 {
     "field_label": "活动日期",
-    "is_required": true
+    "is_required": false
 }
 ```
 
@@ -98,11 +391,11 @@ Authorization: Bearer <token>
 **请求体：**
 ```json
 {
-    "items": [
+    "form_items": [
         {
-            "field_id": 5,
+            "field_id": 13,
             "field_type": "date",
-            "content": "2000-01-01"
+            "field_value": "2000-01-01"
         }
     ]
 }
@@ -113,14 +406,13 @@ Authorization: Bearer <token>
 {
     "success": true,
     "message": "表单数据保存成功",
-    "data": {
-        "saved_data": {
-            "text_fields": {
-                "5": "2000-01-01"
-            },
-            "files": []
+    "saved_items": [
+        {
+            "field_id": 13,
+            "type": "date",
+            "value": "2000-01-01"
         }
-    }
+    ]
 }
 ```
 
@@ -140,19 +432,15 @@ Authorization: Bearer <token>
 {
     "success": true,
     "registration": {
-        "id": 1,
-        "user_id": 123,
-        "user_name": "张三",
-        "email": "zhangsan@example.com",
-        "competition_id": 5,
+        "id": 5,
+        "competition_id": 1,
         "competition_name": "创新设计大赛",
-        "status": "submitted",
-        "created_at": "2024-03-20T10:00:00"
+        "status": "pending",
+        "created_at": "2023-10-15T10:00:00"
     },
     "form_data": [
         {
-            "id": 105,
-            "field_id": 5,
+            "field_id": 13,
             "field_name": "birth_date",
             "field_label": "出生日期",
             "type": "date",
@@ -164,238 +452,13 @@ Authorization: Bearer <token>
 
 ### 日期格式验证
 
-系统会自动验证日期格式是否符合ISO标准（YYYY-MM-DD）。如果日期格式不正确，将返回错误信息：
-
-```json
-{
-    "success": false,
-    "message": "日期格式错误，请使用YYYY-MM-DD格式",
-    "field_errors": {
-        "5": "日期格式错误"
-    }
-}
-```
-
-## 带"其他"选项的单选字段
-
-单选字段现在支持添加"其他"选项，允许用户在没有合适选项时输入自定义内容。
-
-### 创建带"其他"选项的单选字段（管理接口）
-
-```http
-POST /forms/fields
-```
-
-**请求头：**
-```
-Content-Type: application/json
-Authorization: Bearer <admin_token>
-```
-
-**请求体：**
-```json
-{
-    "competition_id": 1,
-    "field_name": "education",
-    "field_label": "最高学历",
-    "field_type": "radio",
-    "is_required": true,
-    "options": [
-        {"value": "high_school", "label": "高中"},
-        {"value": "bachelor", "label": "本科"},
-        {"value": "master", "label": "硕士"},
-        {"value": "doctor", "label": "博士"}
-    ],
-    "other_option": true
-}
-```
-
-**成功响应 (200 OK)**
-```json
-{
-    "id": 6
-}
-```
-
-### 更新带"其他"选项的单选字段（管理接口）
-
-```http
-PUT /forms/fields/{field_id}
-```
-
-**请求头：**
-```
-Content-Type: application/json
-Authorization: Bearer <admin_token>
-```
-
-**请求体：**
-```json
-{
-    "field_label": "教育程度",
-    "options": [
-        {"value": "high_school", "label": "高中"},
-        {"value": "bachelor", "label": "学士"},
-        {"value": "master", "label": "硕士"},
-        {"value": "doctor", "label": "博士"}
-    ],
-    "other_option": true
-}
-```
-
-**成功响应 (200 OK)**
-```json
-{
-    "success": true
-}
-```
-
-### 提交带"其他"选项的单选字段数据（enhanced-data接口）
-
-当用户选择预设选项时：
-
-```http
-POST /forms/registrations/{registration_id}/enhanced-data
-```
-
-**请求头：**
-```
-Content-Type: application/json
-Authorization: Bearer <token>
-```
-
-**请求体：**
-```json
-{
-    "items": [
-        {
-            "field_id": 6,
-            "field_type": "radio",
-            "content": "bachelor"
-        }
-    ]
-}
-```
-
-当用户选择"其他"选项并输入自定义内容时：
-
-```http
-POST /forms/registrations/{registration_id}/enhanced-data
-```
-
-**请求体：**
-```json
-{
-    "items": [
-        {
-            "field_id": 6,
-            "field_type": "radio",
-            "content": {
-                "other": true,
-                "value": "职业教育"
-            }
-        }
-    ]
-}
-```
-
-**成功响应 (200 OK)**
-```json
-{
-    "success": true,
-    "message": "表单数据保存成功",
-    "data": {
-        "saved_data": {
-            "text_fields": {
-                "6": "{\"other\":true,\"value\":\"职业教育\"}"
-            },
-            "files": []
-        }
-    }
-}
-```
-
-### 获取带"其他"选项的单选字段数据（enhanced-data接口）
-
-```http
-GET /forms/registrations/{registration_id}/enhanced-data
-```
-
-**请求头：**
-```
-Authorization: Bearer <token>
-```
-
-**成功响应 (200 OK) - 预设选项场景**
-```json
-{
-    "success": true,
-    "registration": {
-        "id": 1,
-        "user_id": 123,
-        "user_name": "张三",
-        "competition_id": 5,
-        "competition_name": "创新设计大赛",
-        "status": "submitted"
-    },
-    "form_data": [
-        {
-            "id": 106,
-            "field_id": 6,
-            "field_name": "education",
-            "field_label": "最高学历",
-            "type": "radio",
-            "content": "bachelor",
-            "options": [
-                {"value": "high_school", "label": "高中"},
-                {"value": "bachelor", "label": "本科"},
-                {"value": "master", "label": "硕士"},
-                {"value": "doctor", "label": "博士"}
-            ],
-            "other_option": true
-        }
-    ]
-}
-```
-
-**成功响应 (200 OK) - 自定义选项场景**
-```json
-{
-    "success": true,
-    "registration": {
-        "id": 1,
-        "user_id": 123,
-        "user_name": "张三",
-        "competition_id": 5,
-        "competition_name": "创新设计大赛",
-        "status": "submitted"
-    },
-    "form_data": [
-        {
-            "id": 106,
-            "field_id": 6,
-            "field_name": "education",
-            "field_label": "最高学历",
-            "type": "radio",
-            "content": {
-                "other": true,
-                "value": "职业教育"
-            },
-            "options": [
-                {"value": "high_school", "label": "高中"},
-                {"value": "bachelor", "label": "本科"},
-                {"value": "master", "label": "硕士"},
-                {"value": "doctor", "label": "博士"}
-            ],
-            "other_option": true
-        }
-    ]
-}
-```
+系统会验证日期格式是否符合YYYY-MM-DD格式，并验证日期是否有效。无效的日期会导致提交失败。
 
 ## 与活动表单管理的集成
 
 ### 获取活动所有字段（管理接口）
+
+获取活动所有表单字段的接口将包含新的字段属性：`allow_multiple`、`allow_custom_options`和`other_option`。
 
 ```http
 GET /forms/competitions/{competition_id}/fields
@@ -410,23 +473,25 @@ Authorization: Bearer <admin_token>
 ```json
 [
     {
-        "id": 1,
+        "id": 10,
         "competition_id": 1,
-        "field_name": "project_name",
-        "field_label": "项目名称",
-        "field_type": "text",
-        "is_required": true
+        "field_name": "interests",
+        "field_label": "兴趣爱好",
+        "field_type": "radio",
+        "is_required": true,
+        "options": [
+            {"value": "sports", "label": "体育运动"},
+            {"value": "music", "label": "音乐"},
+            {"value": "reading", "label": "阅读"},
+            {"value": "travel", "label": "旅行"},
+            {"value": "cooking", "label": "烹饪"}
+        ],
+        "allow_multiple": true,
+        "allow_custom_options": false,
+        "other_option": false
     },
     {
-        "id": 5,
-        "competition_id": 1,
-        "field_name": "birth_date",
-        "field_label": "出生日期",
-        "field_type": "date",
-        "is_required": true
-    },
-    {
-        "id": 6,
+        "id": 11,
         "competition_id": 1,
         "field_name": "education",
         "field_label": "最高学历",
@@ -438,122 +503,286 @@ Authorization: Bearer <admin_token>
             {"value": "master", "label": "硕士"},
             {"value": "doctor", "label": "博士"}
         ],
+        "allow_multiple": false,
+        "allow_custom_options": false,
         "other_option": true
+    },
+    {
+        "id": 13,
+        "competition_id": 1,
+        "field_name": "birth_date",
+        "field_label": "出生日期",
+        "field_type": "date",
+        "is_required": true
     }
 ]
 ```
 
 ### 获取活动所有表单数据（管理接口）
 
+获取活动表单数据的接口将正确处理多选字段和自定义选项的值。
+
 ```http
 GET /forms/admin/competitions/{competition_id}/users/{user_id}/data
 ```
 
-**请求头：**
-```
-Authorization: Bearer <admin_token>
-```
-
-**成功响应 (200 OK)**
-```json
-{
-    "success": true,
-    "registration": {
-        "id": 1,
-        "user_id": 123,
-        "user_name": "张三",
-        "competition_id": 5,
-        "competition_name": "创新设计大赛",
-        "status": "submitted"
-    },
-    "form_data": [
-        {
-            "id": 101,
-            "field_id": 1,
-            "field_name": "project_name",
-            "field_label": "项目名称",
-            "type": "text",
-            "content": "智能家居控制系统"
-        },
-        {
-            "id": 105,
-            "field_id": 5,
-            "field_name": "birth_date",
-            "field_label": "出生日期",
-            "type": "date",
-            "content": "2000-01-01"
-        },
-        {
-            "id": 106,
-            "field_id": 6,
-            "field_name": "education",
-            "field_label": "最高学历",
-            "type": "radio",
-            "content": {
-                "other": true,
-                "value": "职业教育"
-            },
-            "options": [
-                {"value": "high_school", "label": "高中"},
-                {"value": "bachelor", "label": "本科"},
-                {"value": "master", "label": "硕士"},
-                {"value": "doctor", "label": "博士"}
-            ],
-            "other_option": true
-        }
-    ]
-}
-```
-
 ## 数据库结构变更
 
-实现这些新功能，系统进行了以下数据库结构变更：
+本次更新添加了以下数据库列：
 
-1. 添加了 `other_option` 字段到 `competition_form_fields` 表：
-   ```sql
-   ALTER TABLE competition_form_fields
-   ADD COLUMN other_option BOOLEAN DEFAULT FALSE
-   AFTER options
-   ```
-
-2. 更新了 `enhanced_form_data` 视图，以支持新的类型和字段：
-   ```sql
-   CREATE VIEW enhanced_form_data AS
-   SELECT 
-       rfd.id,
-       rfd.registration_id,
-       rfd.competition_id,
-       rfd.user_id,
-       rfd.field_id,
-       cff.field_name,
-       cff.field_label,
-       cff.field_type AS type,
-       CASE 
-           WHEN cff.field_type IN ('text', 'radio', 'date') THEN rfd.field_value
-           ELSE rfd.file_path
-       END AS content,
-       cff.options,
-       cff.other_option,
-       cr.team_name,
-       rfd.created_at
-   FROM 
-       registration_form_data rfd
-   JOIN 
-       competition_form_fields cff ON rfd.field_id = cff.id
-   JOIN 
-       competition_registrations cr ON rfd.registration_id = cr.id
-   ```
+**competition_form_fields表**
+- `allow_multiple` - 布尔值，表示单选字段是否支持多选模式
+- `allow_custom_options` - 布尔值，表示是否允许用户添加自定义选项
 
 ## 前端实现建议
 
-1. **日期类型字段**：
-   - 使用日期选择器组件
-   - 将选择的日期格式化为ISO标准格式（YYYY-MM-DD）
-   - 在提交前进行格式验证
+### 单选/多选字段实现
 
-2. **带"其他"选项的单选字段**：
-   - 当 `other_option` 为 `true` 时，在单选选项的末尾添加一个"其他"选项
-   - 当用户选择"其他"选项时，显示一个文本输入框
-   - 提交时根据用户的选择，使用适当的格式：
-     - 预设选项：直接提交选项值
-     - 自定义选项：提交包含 `other: true` 和 `value: "自定义内容"` 的对象 
+当字段设置了`allow_multiple = true`时，前端应显示为多选框（checkbox）而非单选框（radio button）。
+
+```jsx
+// 单选/多选字段的渲染示例
+const RadioField = ({ field, value, onChange }) => {
+  if (field.allow_multiple) {
+    // 多选模式
+    return (
+      <div className="form-group">
+        <label>{field.field_label}{field.is_required && <span className="required">*</span>}</label>
+        {field.options.map(option => (
+          <div className="form-check" key={option.value}>
+            <input
+              type="checkbox"
+              className="form-check-input"
+              id={`${field.field_name}_${option.value}`}
+              checked={value && value.includes(option.value)}
+              onChange={(e) => {
+                const newValue = [...(value || [])];
+                if (e.target.checked) {
+                  newValue.push(option.value);
+                } else {
+                  const index = newValue.indexOf(option.value);
+                  if (index !== -1) newValue.splice(index, 1);
+                }
+                onChange(newValue);
+              }}
+            />
+            <label className="form-check-label" htmlFor={`${field.field_name}_${option.value}`}>
+              {option.label}
+            </label>
+          </div>
+        ))}
+        
+        {/* 自定义选项输入 */}
+        {field.allow_custom_options && (
+          <div className="mt-2">
+            <button 
+              type="button" 
+              className="btn btn-sm btn-outline-primary"
+              onClick={() => {
+                const customOption = prompt("请输入自定义选项:");
+                if (customOption && customOption.trim()) {
+                  onChange([...(value || []), customOption.trim()]);
+                }
+              }}
+            >
+              + 添加自定义选项
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  } else {
+    // 单选模式
+    return (
+      <div className="form-group">
+        <label>{field.field_label}{field.is_required && <span className="required">*</span>}</label>
+        {field.options.map(option => (
+          <div className="form-check" key={option.value}>
+            <input
+              type="radio"
+              className="form-check-input"
+              name={field.field_name}
+              id={`${field.field_name}_${option.value}`}
+              value={option.value}
+              checked={value === option.value}
+              onChange={(e) => onChange(e.target.value)}
+            />
+            <label className="form-check-label" htmlFor={`${field.field_name}_${option.value}`}>
+              {option.label}
+            </label>
+          </div>
+        ))}
+        
+        {/* "其他"选项 */}
+        {field.other_option && (
+          <div className="form-check">
+            <input
+              type="radio"
+              className="form-check-input"
+              name={field.field_name}
+              id={`${field.field_name}_other`}
+              value="other"
+              checked={typeof value === 'object' && value.value === 'other'}
+              onChange={() => onChange({value: 'other', custom_text: ''})}
+            />
+            <label className="form-check-label" htmlFor={`${field.field_name}_other`}>
+              其他
+            </label>
+            {typeof value === 'object' && value.value === 'other' && (
+              <input
+                type="text"
+                className="form-control mt-1"
+                placeholder="请说明"
+                value={value.custom_text || ''}
+                onChange={(e) => onChange({value: 'other', custom_text: e.target.value})}
+              />
+            )}
+          </div>
+        )}
+        
+        {/* 自定义选项 */}
+        {field.allow_custom_options && (
+          <div className="mt-2">
+            <button 
+              type="button" 
+              className="btn btn-sm btn-outline-primary"
+              onClick={() => {
+                const customOption = prompt("请输入自定义选项:");
+                if (customOption && customOption.trim()) {
+                  onChange(customOption.trim());
+                }
+              }}
+            >
+              + 添加自定义选项
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+};
+```
+
+### 日期字段实现
+
+日期字段应使用日期选择器组件，确保用户输入的是有效日期。
+
+```jsx
+// 日期字段的渲染示例
+const DateField = ({ field, value, onChange }) => {
+  return (
+    <div className="form-group">
+      <label>{field.field_label}{field.is_required && <span className="required">*</span>}</label>
+      <input
+        type="date"
+        className="form-control"
+        id={field.field_name}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+};
+```
+
+### 表单管理界面的更新
+
+表单管理界面需要添加以下选项：
+1. 单选字段是否允许多选的开关
+2. 是否允许选择"其他"并填写理由的开关
+3. 是否允许添加自定义选项的开关
+
+```jsx
+// 表单字段编辑界面示例
+const FormFieldEditor = ({ field, onSave }) => {
+  const [fieldData, setFieldData] = useState({
+    field_name: field?.field_name || '',
+    field_label: field?.field_label || '',
+    field_type: field?.field_type || 'text',
+    is_required: field?.is_required !== false,
+    options: field?.options || [],
+    other_option: field?.other_option || false,
+    allow_multiple: field?.allow_multiple || false,
+    allow_custom_options: field?.allow_custom_options || false
+  });
+  
+  // ...字段名称、标签等基础信息编辑代码...
+  
+  // 单选字段特有的设置
+  const renderRadioOptions = () => {
+    if (fieldData.field_type !== 'radio') return null;
+    
+    return (
+      <div className="card mt-3">
+        <div className="card-header">单选字段设置</div>
+        <div className="card-body">
+          {/* 选项列表编辑 */}
+          {/* ... */}
+          
+          {/* 功能开关 */}
+          <div className="form-check mt-3">
+            <input
+              type="checkbox"
+              className="form-check-input"
+              id="allow_multiple"
+              checked={fieldData.allow_multiple}
+              onChange={(e) => setFieldData({...fieldData, allow_multiple: e.target.checked})}
+            />
+            <label className="form-check-label" htmlFor="allow_multiple">
+              允许多选（将单选框转为多选框）
+            </label>
+          </div>
+          
+          <div className="form-check mt-2">
+            <input
+              type="checkbox"
+              className="form-check-input"
+              id="other_option"
+              checked={fieldData.other_option}
+              onChange={(e) => setFieldData({...fieldData, other_option: e.target.checked})}
+            />
+            <label className="form-check-label" htmlFor="other_option">
+              允许选择"其他"并填写理由
+            </label>
+          </div>
+          
+          <div className="form-check mt-2">
+            <input
+              type="checkbox"
+              className="form-check-input"
+              id="allow_custom_options"
+              checked={fieldData.allow_custom_options}
+              onChange={(e) => setFieldData({...fieldData, allow_custom_options: e.target.checked})}
+            />
+            <label className="form-check-label" htmlFor="allow_custom_options">
+              允许用户添加自定义选项
+            </label>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* 基本字段信息 */}
+      <div className="form-group">
+        <label>字段名称</label>
+        <input
+          type="text"
+          className="form-control"
+          value={fieldData.field_name}
+          onChange={(e) => setFieldData({...fieldData, field_name: e.target.value})}
+          required
+        />
+      </div>
+      
+      {/* ... 其他基本字段 ... */}
+      
+      {/* 单选字段特有设置 */}
+      {renderRadioOptions()}
+      
+      <button type="submit" className="btn btn-primary mt-3">保存字段</button>
+    </form>
+  );
+}; 

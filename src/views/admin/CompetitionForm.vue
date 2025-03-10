@@ -23,6 +23,9 @@ interface FormField {
   field_type: string
   is_required: boolean
   options?: { value: string; label: string }[]
+  allow_multiple: boolean
+  other_option: boolean
+  allow_custom_options: boolean
 }
 
 const route = useRoute()
@@ -41,7 +44,10 @@ const newField = ref<FormField>({
   field_label: '',
   field_type: 'text',
   is_required: true,
-  options: []
+  options: [],
+  allow_multiple: false,
+  other_option: false,
+  allow_custom_options: false
 })
 
 // 新增：选项管理
@@ -55,7 +61,10 @@ const openFieldDialog = () => {
     field_label: '',
     field_type: 'text',
     is_required: true,
-    options: []
+    options: [],
+    allow_multiple: false,
+    other_option: false,
+    allow_custom_options: false
   }
   newOption.value = { value: '', label: '' }
   fieldDialogVisible.value = true
@@ -234,7 +243,10 @@ const loadFormFields = async () => {
         field_label: field.field_label || '',
         field_type: field.field_type || 'text',
         is_required: field.is_required === true || field.is_required === 1,
-        options: []
+        options: [],
+        allow_multiple: field.allow_multiple === true || field.allow_multiple === 1,
+        other_option: field.other_option === true || field.other_option === 1,
+        allow_custom_options: field.allow_custom_options === true || field.allow_custom_options === 1
       }
       
       // 处理单选题选项
@@ -340,7 +352,7 @@ const validateField = (field: FormField): boolean => {
   // 验证单选题选项
   if (field.field_type === 'radio') {
     if (!Array.isArray(field.options) || field.options.length < 2) {
-      ElMessage.error('单选题至少需要两个选项')
+      ElMessage.error('选择题至少需要两个选项')
       return false
     }
     
@@ -387,7 +399,10 @@ const addFormField = async (formEl: FormInstance | undefined) => {
       field_name: newField.value.field_name,
       field_label: newField.value.field_label,
       field_type: newField.value.field_type,
-      is_required: newField.value.is_required
+      is_required: newField.value.is_required,
+      allow_multiple: newField.value.allow_multiple,
+      other_option: newField.value.other_option,
+      allow_custom_options: newField.value.allow_custom_options
     }
     
     // 单选题需要添加options字段
@@ -435,7 +450,10 @@ const addFormField = async (formEl: FormInstance | undefined) => {
       field_label: '',
       field_type: 'text',
       is_required: true,
-      options: []
+      options: [],
+      allow_multiple: false,
+      other_option: false,
+      allow_custom_options: false
     }
     newOption.value = { value: '', label: '' }
   } catch (error: any) {
@@ -467,7 +485,8 @@ const getFieldTypeText = (type: string) => {
     case 'text': return '文本'
     case 'image': return '图片'
     case 'file': return '文件'
-    case 'radio': return '单选题'
+    case 'radio': return '选择题'
+    case 'date': return '日期'
     default: return type
   }
 }
@@ -535,8 +554,6 @@ const universityPresets = {
     "郑州经贸学院"
   ]
 }
-
-
 
 // 添加预设选项函数
 const applyUniversityPreset = () => {
@@ -746,7 +763,8 @@ onMounted(async () => {
           <el-form-item label="字段类型" prop="field_type">
             <el-select v-model="newField.field_type" style="width: 100%">
               <el-option label="文本" value="text" />
-              <el-option label="单选题" value="radio" />
+              <el-option label="选择题" value="radio" />
+              <el-option label="日期" value="date" />
               <el-option label="图片" value="image" />
               <el-option label="文件" value="file" />
             </el-select>
@@ -758,11 +776,53 @@ onMounted(async () => {
               <span class="text-sm font-medium">选项设置</span>
             </el-divider>
             
-            <!-- 已添加的选项 -->
+            <!-- 选项管理工具栏 -->
+            <div class="mb-4 flex justify-between items-center">
+              <div class="text-sm text-gray-500">
+                单选题至少需要两个选项
+              </div>
+              <div>
+                <el-button 
+                  type="primary" 
+                  plain 
+                  size="small" 
+                  @click="applyUniversityPreset"
+                >
+                  添加高校预设
+                </el-button>
+              </div>
+            </div>
+            
+            <!-- 添加新选项 -->
+            <div class="mb-4">
+              <div class="flex gap-2 mb-2">
+                <el-input
+                  v-model="newOption.value"
+                  placeholder="选项值（如：option1）"
+                  size="default"
+                />
+                <el-input
+                  v-model="newOption.label"
+                  placeholder="选项标签（如：选项1）"
+                  size="default"
+                />
+                <el-button type="primary" @click="addOption">
+                  添加选项
+                </el-button>
+              </div>
+              <small class="text-gray-500">
+                选项值：用于系统识别，只能包含字母、数字和下划线<br>
+                选项标签：显示给用户看的文本
+              </small>
+            </div>
+            
+            <!-- 已添加的选项列表 -->
             <div v-if="newField.options && newField.options.length > 0" class="mb-4">
               <div class="flex justify-between items-center mb-2">
                 <h3 class="text-sm font-medium">已添加选项</h3>
-                <div class="text-xs text-gray-500">单选题至少需要两个选项</div>
+                <div class="text-xs text-gray-500">
+                  单选题至少需要两个选项
+                </div>
               </div>
               
               <div 
@@ -787,33 +847,19 @@ onMounted(async () => {
               </div>
             </div>
             
-            <!-- 添加新选项 -->
-            <div class="mb-2">
-              <div class="flex justify-between items-center mb-2">
-                <h3 class="text-sm font-medium">添加新选项</h3>
-                <el-button 
-                  type="success" 
-                  size="small" 
-                  @click="applyUniversityPreset" 
-                  title="一键添加河南省高校列表"
-                >
-                  应用高校预设
-                </el-button>
-              </div>
+            <!-- 新增功能开关 -->
+            <div class="space-y-2 mt-4">
+              <el-checkbox v-model="newField.allow_multiple">
+                允许多选（将单选框转为多选框）
+              </el-checkbox>
               
-              <div class="flex items-end space-x-2">
-                <el-form-item label="选项值" class="mb-0 flex-1">
-                  <el-input v-model="newOption.value" placeholder="如：tech" />
-                  <div class="text-xs text-gray-500 mt-1">用于数据存储，如 tech</div>
-                </el-form-item>
-                <el-form-item label="选项标签" class="mb-0 flex-1">
-                  <el-input v-model="newOption.label" placeholder="如：科技创新" />
-                  <div class="text-xs text-gray-500 mt-1">用于前端显示，如 科技创新</div>
-                </el-form-item>
-                <el-button type="primary" @click="addOption" class="h-10">
-                  添加
-                </el-button>
-              </div>
+              <el-checkbox v-model="newField.other_option">
+                允许选择"其他"并填写理由
+              </el-checkbox>
+              
+              <el-checkbox v-model="newField.allow_custom_options">
+                允许用户添加自定义选项
+              </el-checkbox>
             </div>
           </template>
           
