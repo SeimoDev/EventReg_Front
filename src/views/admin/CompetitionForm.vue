@@ -69,6 +69,14 @@ const newField = ref<FormField>({
 // 新增：选项管理
 const newOption = ref({ value: '', label: '' })
 
+// 监听选项标签变化，自动生成选项值
+watch(() => newOption.value.label, (newLabel) => {
+  // 只有当选项值为空或者用户尚未手动修改时才自动处理
+  if (!newOption.value.value || newOption.value.value === generateFieldName(newOption.value.label)) {
+    newOption.value.value = generateFieldName(newLabel)
+  }
+})
+
 // 判断字符串是否包含中文
 const containsChinese = (str: string) => {
   return /[\u4e00-\u9fa5]+/.test(str)
@@ -969,6 +977,7 @@ onMounted(async () => {
               <small class="text-gray-500">
                 选项值：用于系统识别，只能包含字母、数字和下划线<br>
                 选项标签：显示给用户看的文本
+                <span class="text-blue-500 ml-1">输入中文标签时会自动生成拼音首字母作为选项值</span>
               </small>
             </div>
             
