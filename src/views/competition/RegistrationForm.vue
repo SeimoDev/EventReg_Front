@@ -217,7 +217,7 @@ const buildFormItems = () => {
 const rules = computed<FormRules>(() => {
   const rulesObj: FormRules = {
     team_name: [
-      { required: true, message: '请输入团队名称', trigger: 'blur' },
+      { required: true, message: '请输入项目名称', trigger: 'blur' },
       { min: 2, max: 50, message: '长度在2到50个字符', trigger: 'blur' }
     ],
     contact_phone: [
@@ -2150,8 +2150,8 @@ watch(formData, (newVal) => {
       
 
       <!-- 基本字段 -->
-          <el-form-item label="团队名称" prop="team_name">
-        <el-input v-model="formData.team_name" placeholder="请输入团队名称"></el-input>
+          <el-form-item label="项目名称" prop="team_name">
+        <el-input v-model="formData.team_name" placeholder="请输入项目名称"></el-input>
           </el-form-item>
           
           <el-form-item label="联系电话" prop="contact_phone">

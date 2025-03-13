@@ -139,7 +139,7 @@ Authorization: Bearer <your_admin_token>
       * `end_time`: 活动结束时间
     * `registration`: 报名基本信息
       * `id`: 报名ID
-      * `team_name`: 团队名称
+      * `team_name`: 项目名称
       * `contact_phone`: 联系电话
       * `status`: 报名状态
       * `created_at`: 报名创建时间
@@ -161,7 +161,7 @@ Authorization: Bearer <your_admin_token>
 **示例请求**：
 
 ```bash
-curl -X GET "http://localhost:9988/forms/admin/competitions/10/users/5/data" \
+curl -X GET "http://47.245.102.255:9988/forms/admin/competitions/10/users/5/data" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIiwiZXhwIjoxNjE2MjM5MDIyfQ.example_token"
 ```
 

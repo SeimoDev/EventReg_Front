@@ -14,7 +14,7 @@
 在项目根目录的 `.env` 文件中配置以下参数：
 
 ```env
-MYSQL_HOST=localhost
+MYSQL_HOST=47.245.102.255
 MYSQL_PORT=3306
 MYSQL_USER=root
 MYSQL_PASSWORD=your_password

@@ -2,7 +2,7 @@
 
 ## 基本信息
 
-- 基础URL: `http://localhost:8000`
+- 基础URL: `http://47.245.102.255:8000`
 - 所有POST请求的Content-Type应为: `application/json`
 - 认证方式: Bearer Token (在请求头中添加 `Authorization: Bearer <token>`)
 
@@ -465,7 +465,7 @@ files = [
 
 # 发送请求
 response = requests.post(
-    'http://localhost:8000/forms/registrations/1/data',
+    'http://47.245.102.255:8000/forms/registrations/1/data',
     data={'form_data': json.dumps(form_data)},
     files=files,
     headers={'Authorization': f'Bearer {token}'}
@@ -480,7 +480,7 @@ import requests
 
 # 获取文件
 response = requests.get(
-    'http://localhost:8000/forms/files/1/field_1',
+    'http://47.245.102.255:8000/forms/files/1/field_1',
     headers={'Authorization': f'Bearer {token}'}
 )
 
@@ -629,7 +629,7 @@ Authorization: Bearer <token>
 | id | 整数 | 报名记录ID |
 | competition_id | 整数 | 活动ID |
 | competition_title | 字符串 | 活动标题 |
-| team_name | 字符串 | 团队名称 |
+| team_name | 字符串 | 项目名称 |
 | status | 字符串 | 报名状态（pending:待审核, approved:已通过, rejected:已拒绝） |
 | created_at | 日期时间 | 报名时间 |
 

@@ -56,7 +56,7 @@ files = {
 
 # 发送请求
 response = requests.post(
-    "http://localhost:8000/forms/registrations/1/enhanced-data",
+    "http://47.245.102.255:8000/forms/registrations/1/enhanced-data",
     headers={"Authorization": f"Bearer {token}"},
     files=files
 )

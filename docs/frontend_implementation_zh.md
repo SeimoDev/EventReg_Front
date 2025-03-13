@@ -779,7 +779,7 @@ export function FormDataViewer({ formData }) {
 ### 创建多选字段测试
 
 ```bash
-curl -X POST http://localhost:8000/forms/fields \
+curl -X POST http://47.245.102.255:8000/forms/fields \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <admin_token>" \
   -d '{
@@ -801,7 +801,7 @@ curl -X POST http://localhost:8000/forms/fields \
 ### 创建带"其他"选项的单选字段测试
 
 ```bash
-curl -X POST http://localhost:8000/forms/fields \
+curl -X POST http://47.245.102.255:8000/forms/fields \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <admin_token>" \
   -d '{
@@ -823,7 +823,7 @@ curl -X POST http://localhost:8000/forms/fields \
 ### 创建日期字段测试
 
 ```bash
-curl -X POST http://localhost:8000/forms/fields \
+curl -X POST http://47.245.102.255:8000/forms/fields \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <admin_token>" \
   -d '{
@@ -838,7 +838,7 @@ curl -X POST http://localhost:8000/forms/fields \
 ### 提交表单数据测试
 
 ```bash
-curl -X POST http://localhost:8000/forms/registrations/1/enhanced-data \
+curl -X POST http://47.245.102.255:8000/forms/registrations/1/enhanced-data \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{

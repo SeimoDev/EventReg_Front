@@ -1,10 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request from '../../api/request'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Calendar, List, Plus, Delete } from '@element-plus/icons-vue'
+// @ts-ignore
+import PinyinMatch from 'pinyin-match'
+
+// 检查拼音库是否可用
+const isPinyinAvailable = (() => {
+  try {
+    // 测试是否能正确获取到拼音匹配
+    const testResult = PinyinMatch.match('测试', '测试')
+    console.log('拼音库测试结果:', testResult)
+    // PinyinMatch.match 会返回匹配信息，不为null即可认为可用
+    return !!testResult
+  } catch (error) {
+    console.warn('拼音库不可用:', error)
+    return false
+  }
+})()
 
 interface Competition {
   id: number
@@ -52,6 +68,146 @@ const newField = ref<FormField>({
 
 // 新增：选项管理
 const newOption = ref({ value: '', label: '' })
+
+// 判断字符串是否包含中文
+const containsChinese = (str: string) => {
+  return /[\u4e00-\u9fa5]+/.test(str)
+}
+
+// 将中文字符串转换为拼音首字母
+const chineseToPinyinInitials = (str: string) => {
+  // 如果拼音库不可用，使用简单替换
+  if (!isPinyinAvailable) {
+    console.log('使用简单替换方法处理中文')
+    // 给中文字符分配简单的标识
+    const simpleMapping: Record<string, string> = {
+      '项': 'x', '目': 'm', '类': 'l', '型': 'x', '名': 'm', '称': 'c',
+      '说': 's', '明': 'm', '日': 'r', '期': 'q', '文': 'w', '件': 'j',
+      '图': 't', '片': 'p', '选': 'x', '择': 'z', '学': 'x', '校': 'x',
+      '单': 'd', '位': 'w', '参': 'c', '赛': 's', '队': 'd', '伍': 'w'
+    }
+    
+    let result = ''
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i]
+      if (/[\u4e00-\u9fa5]/.test(char)) {
+        // 中文字符
+        result += simpleMapping[char] || 'z' // 如果没有映射，默认用'z'
+      } else if (/[a-zA-Z0-9_]/.test(char)) {
+        // 英文字母、数字和下划线保留
+        result += char.toLowerCase()
+      }
+    }
+    return result
+  }
+  
+  // 使用pinyin-match库处理
+  try {
+    // 获取整个字符串的拼音匹配模式
+    const matchResult = PinyinMatch.match(str, str)
+    console.log('整体拼音匹配:', str, matchResult)
+    if (!matchResult) {
+      console.warn('无法匹配拼音:', str)
+      return str.replace(/[\u4e00-\u9fa5]/g, '')
+    }
+    
+    // 提取每个中文字符的拼音首字母
+    let result = ''
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i]
+      if (/[\u4e00-\u9fa5]/.test(char)) {
+        // 中文字符，尝试获取拼音
+        try {
+          // PinyinMatch.match 返回的是匹配结果数组，不是直接的拼音字符串
+          // 查看一下实际形式，进行调试
+          const charMatch = PinyinMatch.match(char, char)
+          console.log('拼音匹配结果:', char, charMatch)
+          
+          // 根据pinyin-match的实际返回结构调整获取方式
+          // 实际上pinyin-match并不直接返回拼音，而是返回匹配信息
+          // 这里我们直接从原始字符转换
+          
+          // 使用一个简单的方法获取首字母
+          const pinyinMap: Record<string, string> = {
+            'a': 'a', 'b': 'b', 'c': 'c', 'd': 'd', 'e': 'e', 'f': 'f', 'g': 'g', 'h': 'h',
+            'i': 'i', 'j': 'j', 'k': 'k', 'l': 'l', 'm': 'm', 'n': 'n', 'o': 'o', 'p': 'p',
+            'q': 'q', 'r': 'r', 's': 's', 't': 't', 'u': 'u', 'v': 'v', 'w': 'w', 'x': 'x',
+            'y': 'y', 'z': 'z',
+            '阿': 'a', '啊': 'a', '锕': 'a',
+            '八': 'b', '把': 'b', '爸': 'b', '白': 'b', '百': 'b', '北': 'b', '本': 'b', '不': 'b', '部': 'b',
+            '测': 'c', '彻': 'c', '车': 'c', '成': 'c', '城': 'c', '程': 'c', '池': 'c', '次': 'c', '此': 'c',
+            '大': 'd', '单': 'd', '但': 'd', '当': 'd', '到': 'd', '道': 'd', '的': 'd', '队': 'd', '对': 'd', '多': 'd',
+            '二': 'e', '而': 'e', '儿': 'e', '耳': 'e',
+            '发': 'f', '方': 'f', '放': 'f', '飞': 'f', '非': 'f', '分': 'f', '风': 'f', '负': 'f', '复': 'f', '父': 'f',
+            '高': 'g', '个': 'g', '工': 'g', '公': 'g', '共': 'g', '古': 'g', '国': 'g', '果': 'g', '过': 'g',
+            '海': 'h', '好': 'h', '和': 'h', '河': 'h', '黑': 'h', '红': 'h', '后': 'h', '会': 'h', '或': 'h',
+            '机': 'j', '级': 'j', '件': 'j', '将': 'j', '江': 'j', '交': 'j', '教': 'j', '金': 'j', '近': 'j', '进': 'j',
+            '开': 'k', '看': 'k', '可': 'k', '空': 'k', '口': 'k', '快': 'k', '宽': 'k', '跨': 'k', '块': 'k',
+            '来': 'l', '里': 'l', '理': 'l', '力': 'l', '立': 'l', '连': 'l', '凉': 'l', '类': 'l', '历': 'l', '领': 'l',
+            '美': 'm', '们': 'm', '名': 'm', '面': 'm', '明': 'm', '目': 'm', '默': 'm', '某': 'm',
+            '南': 'n', '你': 'n', '年': 'n', '能': 'n', '宁': 'n', '女': 'n', '内': 'n', '那': 'n',
+            '哦': 'o',
+            '派': 'p', '盘': 'p', '旁': 'p', '跑': 'p', '片': 'p', '平': 'p', '苹': 'p', '品': 'p', '评': 'p',
+            '七': 'q', '期': 'q', '其': 'q', '奇': 'q', '起': 'q', '前': 'q', '千': 'q', '钱': 'q', '情': 'q', '请': 'q',
+            '日': 'r', '人': 'r', '认': 'r', '如': 'r', '入': 'r', '柔': 'r', '软': 'r', '润': 'r', '让': 'r',
+            '三': 's', '色': 's', '山': 's', '上': 's', '少': 's', '说': 's', '司': 's', '赛': 's', '思': 's', '所': 's',
+            '他': 't', '台': 't', '太': 't', '天': 't', '田': 't', '同': 't', '图': 't', '体': 't', '通': 't', '头': 't',
+            '外': 'w', '玩': 'w', '完': 'w', '万': 'w', '王': 'w', '文': 'w', '我': 'w', '位': 'w', '伍': 'w', '无': 'w',
+            '西': 'x', '希': 'x', '系': 'x', '想': 'x', '小': 'x', '校': 'x', '学': 'x', '项': 'x', '先': 'x', '行': 'x', '性': 'x',
+            '样': 'y', '要': 'y', '也': 'y', '一': 'y', '以': 'y', '用': 'y', '由': 'y', '有': 'y', '又': 'y', '月': 'y',
+            '在': 'z', '再': 'z', '早': 'z', '怎': 'z', '张': 'z', '这': 'z', '中': 'z', '重': 'z', '择': 'z', '责': 'z', '着': 'z', '做': 'z', '主': 'z', '组': 'z'
+          }
+          
+          // 获取该字符的拼音首字母
+          const firstLetter = pinyinMap[char]
+          if (firstLetter) {
+            result += firstLetter
+          } else {
+            // 如果字典中没有，尝试从匹配结果中获取信息
+            // 根据调试信息，可能需要调整此部分
+            if (charMatch && charMatch.length > 0) {
+              result += 'z' // 暂时使用默认字母
+            } else {
+              result += 'z' // 默认字母
+            }
+          }
+        } catch (e) {
+          console.error('单字符拼音转换失败:', char, e)
+          result += 'z' // 出错时使用默认字母
+        }
+      } else if (/[a-zA-Z0-9_]/.test(char)) {
+        // 英文字母、数字和下划线保留
+        result += char.toLowerCase()
+      }
+    }
+    return result
+  } catch (error) {
+    console.error('拼音转换失败:', error)
+    // 如果转换失败，退回到简单替换方案，去掉所有中文
+    return str.replace(/[\u4e00-\u9fa5]/g, '')
+  }
+}
+
+// 将字段标签转换为合法的字段名称
+const generateFieldName = (label: string) => {
+  if (!label) return ''
+  
+  if (containsChinese(label)) {
+    // 对中文进行处理，获取拼音首字母
+    return chineseToPinyinInitials(label)
+  } else {
+    // 对英文和其他字符进行处理，转小写并替换空格为下划线
+    return label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+  }
+}
+
+// 监听字段标签变化，自动处理字段名称
+watch(() => newField.value.field_label, (newLabel) => {
+  // 只有当字段名称为空或者用户尚未手动修改时才自动处理
+  if (!newField.value.field_name || newField.value.field_name === generateFieldName(newField.value.field_label)) {
+    newField.value.field_name = generateFieldName(newLabel)
+  }
+})
 
 // 打开添加字段对话框
 const openFieldDialog = () => {
@@ -756,7 +912,7 @@ onMounted(async () => {
           <el-form-item label="字段标签" prop="field_label">
             <el-input v-model="newField.field_label" placeholder="用于前端显示，如 项目类型" />
             <div class="text-xs text-gray-500 mt-1">
-              显示给用户的名称，如 项目类型
+              显示给用户的名称，如 项目类型。<span class="text-blue-500">输入中文时会自动生成拼音首字母作为字段名称，输入英文时会自动同步到字段名称</span>
             </div>
           </el-form-item>
           

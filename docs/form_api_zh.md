@@ -92,7 +92,7 @@ Authorization: Bearer <token>
 - `success`: 是否成功
 - `registrations`: 报名记录列表
   - `id`: 报名记录ID
-  - `team_name`: 团队名称
+  - `team_name`: 项目名称
   - `status`: 报名状态（pending: 待审核, approved: 已通过, rejected: 已拒绝）
   - `created_at`: 创建时间
   - `competition_name`: 活动名称

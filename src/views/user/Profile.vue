@@ -380,7 +380,7 @@ onMounted(() => {
           <template v-if="registrations.length > 0">
             <el-table :data="registrations" border>
               <el-table-column label="活动名称" prop="competition_title" min-width="200" />
-              <el-table-column label="团队名称" prop="team_name" min-width="150" />
+              <el-table-column label="项目名称" prop="team_name" min-width="150" />
               <el-table-column label="报名时间" min-width="180">
                 <template #default="{ row }">
                   {{ new Date(row.created_at).toLocaleString() }}

@@ -12,7 +12,7 @@
       <div class="flex flex-wrap gap-4 mb-6">
         <el-input
           v-model="searchQuery"
-          placeholder="搜索团队名称/用户名/邮箱"
+          placeholder="搜索项目名称/用户名/邮箱"
           class="w-64"
           clearable
           @input="handleSearch"
@@ -42,7 +42,7 @@
         border
         style="width: 100%"
       >
-        <el-table-column prop="team_name" label="团队名称" min-width="120" />
+        <el-table-column prop="team_name" label="项目名称" min-width="120" />
         <el-table-column prop="username" label="报名用户" min-width="120" />
         <el-table-column prop="contact_phone" label="联系电话" min-width="120" />
         <el-table-column prop="email" label="邮箱" min-width="180" />
@@ -117,7 +117,7 @@
             <el-tabs>
               <el-tab-pane label="报名信息">
                 <el-descriptions :column="2" border>
-                  <el-descriptions-item label="团队名称">
+                  <el-descriptions-item label="项目名称">
                     {{ currentRegistration.team_name }}
                   </el-descriptions-item>
                   <el-descriptions-item label="报名用户">
