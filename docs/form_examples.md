@@ -14,7 +14,7 @@
 
 ## 接口概述
 
-**基础URL**: `http://47.245.102.255:8000/forms/registrations/{registration_id}/data`
+**基础URL**: `http://localhost:8000/forms/registrations/{registration_id}/data`
 
 **HTTP方法**: POST
 
@@ -30,7 +30,7 @@
 
 #### cURL 示例
 ```bash
-curl -X POST "http://47.245.102.255:8000/forms/registrations/1/data" \
+curl -X POST "http://localhost:8000/forms/registrations/1/data" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -59,7 +59,7 @@ form_data = {
 
 # 发送请求
 response = requests.post(
-    "http://47.245.102.255:8000/forms/registrations/1/data",
+    "http://localhost:8000/forms/registrations/1/data",
     headers=headers,
     json=form_data
 )
@@ -88,7 +88,7 @@ const formData = {
 };
 
 // 发送请求
-fetch("http://47.245.102.255:8000/forms/registrations/1/data", {
+fetch("http://localhost:8000/forms/registrations/1/data", {
   method: "POST",
   headers: headers,
   body: JSON.stringify(formData)
@@ -108,7 +108,7 @@ fetch("http://47.245.102.255:8000/forms/registrations/1/data", {
 
 #### cURL 示例
 ```bash
-curl -X POST "http://47.245.102.255:8000/forms/registrations/1/data" \
+curl -X POST "http://localhost:8000/forms/registrations/1/data" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -142,7 +142,7 @@ with open("team_photo.jpg", "rb") as image_file:
 
 # 发送请求
 response = requests.post(
-    "http://47.245.102.255:8000/forms/registrations/1/data",
+    "http://localhost:8000/forms/registrations/1/data",
     headers=headers,
     json=form_data
 )
@@ -187,7 +187,7 @@ getBase64(imageFile)
     formData["3"] = base64Image;
     
     // 发送请求
-    return fetch("http://47.245.102.255:8000/forms/registrations/1/data", {
+    return fetch("http://localhost:8000/forms/registrations/1/data", {
       method: "POST",
       headers: headers,
       body: JSON.stringify(formData)
@@ -208,7 +208,7 @@ getBase64(imageFile)
 
 #### cURL 示例
 ```bash
-curl -X POST "http://47.245.102.255:8000/forms/registrations/1/data" \
+curl -X POST "http://localhost:8000/forms/registrations/1/data" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -F 'form_data={"1":"项目名称：创新项目"}' \
   -F "field_4=@/path/to/proposal.pdf"
@@ -238,7 +238,7 @@ files = {
 
 # 发送请求
 response = requests.post(
-    "http://47.245.102.255:8000/forms/registrations/1/data",
+    "http://localhost:8000/forms/registrations/1/data",
     headers=headers,
     files=files
 )
@@ -273,7 +273,7 @@ const fileInput = document.getElementById('file-input');
 formData.append('field_4', fileInput.files[0]);
 
 // 发送请求
-fetch("http://47.245.102.255:8000/forms/registrations/1/data", {
+fetch("http://localhost:8000/forms/registrations/1/data", {
   method: "POST",
   headers: headers,
   body: formData
@@ -293,7 +293,7 @@ fetch("http://47.245.102.255:8000/forms/registrations/1/data", {
 
 #### cURL 示例
 ```bash
-curl -X POST "http://47.245.102.255:8000/forms/registrations/1/data" \
+curl -X POST "http://localhost:8000/forms/registrations/1/data" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -F 'form_data={"1":"项目名称","2":"项目描述"}' \
   -F "field_3=@/path/to/team_photo.jpg" \
@@ -326,7 +326,7 @@ files = {
 
 # 发送请求
 response = requests.post(
-    "http://47.245.102.255:8000/forms/registrations/1/data",
+    "http://localhost:8000/forms/registrations/1/data",
     headers=headers,
     files=files
 )
@@ -366,7 +366,7 @@ const fileInput = document.getElementById('file-input');
 formData.append('field_4', fileInput.files[0]);
 
 // 发送请求
-fetch("http://47.245.102.255:8000/forms/registrations/1/data", {
+fetch("http://localhost:8000/forms/registrations/1/data", {
   method: "POST",
   headers: headers,
   body: formData
@@ -391,7 +391,7 @@ import json
 
 # 发送请求
 response = requests.post(
-    "http://47.245.102.255:8000/forms/registrations/1/data",
+    "http://localhost:8000/forms/registrations/1/data",
     headers=headers,
     json=form_data
 )
@@ -421,7 +421,7 @@ else:
 
 #### JavaScript 示例
 ```javascript
-fetch("http://47.245.102.255:8000/forms/registrations/1/data", {
+fetch("http://localhost:8000/forms/registrations/1/data", {
   method: "POST",
   headers: headers,
   body: formData
@@ -564,7 +564,7 @@ export default {
     // 获取表单字段信息
     async getFormFields() {
       try {
-        const response = await fetch(`http://47.245.102.255:8000/forms/competitions/1/fields`, {
+        const response = await fetch(`http://localhost:8000/forms/competitions/1/fields`, {
           headers: {
             "Authorization": `Bearer ${this.getToken()}`
           }
@@ -650,7 +650,7 @@ export default {
         }
         
         // 发送请求
-        const response = await fetch(`http://47.245.102.255:8000/forms/registrations/${this.registrationId}/data`, {
+        const response = await fetch(`http://localhost:8000/forms/registrations/${this.registrationId}/data`, {
           method: 'POST',
           headers: {
             "Authorization": `Bearer ${this.getToken()}`
@@ -813,7 +813,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
     
     try {
       final response = await http.get(
-        Uri.parse('http://47.245.102.255:8000/forms/competitions/1/fields'),
+        Uri.parse('http://localhost:8000/forms/competitions/1/fields'),
         headers: {
           'Authorization': 'Bearer ${getToken()}',
         },
@@ -883,7 +883,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://47.245.102.255:8000/forms/registrations/$registrationId/data'),
+        Uri.parse('http://localhost:8000/forms/registrations/$registrationId/data'),
       );
       
       // 添加认证头

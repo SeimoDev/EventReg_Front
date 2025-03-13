@@ -1393,10 +1393,30 @@ const submitForm = async () => {
       } else {
         // 文本、单选或日期字段
         if (fieldValue) {
+          // 处理单选字段的"other"选项
+          let contentValue = fieldValue;
+          
+          if (field.field_type === 'radio') {
+            // 处理多选模式下的"other"选项
+            if (field.allow_multiple && Array.isArray(contentValue)) {
+              contentValue = [...contentValue]; // 创建副本避免修改原始数据
+              
+              // 将数组中的"other"替换为用户输入的文本
+              const otherIndex = contentValue.indexOf('other');
+              if (otherIndex >= 0 && otherOptions[fieldId] && otherOptions[fieldId].text) {
+                contentValue[otherIndex] = otherOptions[fieldId].text;
+              }
+            }
+            // 处理单选模式下的"other"选项 
+            else if (contentValue === 'other' && otherOptions[fieldId] && otherOptions[fieldId].text) {
+              contentValue = otherOptions[fieldId].text;
+            }
+          }
+          
           formItems.push({
             field_id: fieldId,
             field_type: field.field_type,
-            content: fieldValue
+            content: contentValue
           });
           console.log(`添加${field.field_type}字段: ID=${fieldId}`);
         } else if (field.is_required) {
@@ -2012,6 +2032,37 @@ const prepareFormData = () => {
   
   return { form_items: formItems }
 }
+
+// 监听多选值变化，确保在选择"其他"选项时初始化otherOptions对象
+watch(multiSelectValues, (newVal) => {
+  Object.keys(newVal).forEach(fieldId => {
+    const id = Number(fieldId)
+    if (newVal[id]?.includes('other')) {
+      // 如果选择了"其他"选项，确保otherOptions[id]已初始化
+      if (!otherOptions[id]) {
+        otherOptions[id] = { selected: true, text: '' }
+      } else {
+        otherOptions[id].selected = true
+      }
+    }
+  })
+}, { deep: true })
+
+// 监听表单单选值变化，确保在选择"其他"选项时初始化otherOptions对象
+watch(formData, (newVal) => {
+  formFields.value.forEach(field => {
+    if (!field.allow_multiple && newVal[`field_${field.id}`] === 'other') {
+      // 如果选择了"其他"选项，确保otherOptions[field.id]已初始化
+      if (!otherOptions[field.id]) {
+        otherOptions[field.id] = { selected: true, text: '' }
+      } else {
+        otherOptions[field.id].selected = true
+      }
+    }
+  })
+}, { deep: true })
+
+// 处理多选变化
 </script>
 
 <template>
@@ -2163,7 +2214,8 @@ const prepareFormData = () => {
                   <!-- "其他"选项的输入框 -->
                   <el-input
                     v-if="field.other_option && multiSelectValues[field.id]?.includes('other')"
-                    v-model="otherOptions[field.id]"
+                    v-model="otherOptions[field.id].text"
+                    type="text"
                     placeholder="请说明其他选项内容"
                     class="mt-2"
                   />
@@ -2201,7 +2253,8 @@ const prepareFormData = () => {
                   <!-- "其他"选项的输入框 -->
                   <el-input
                     v-if="field.other_option && formData[`field_${field.id}`] === 'other'"
-                    v-model="otherOptions[field.id]"
+                    v-model="otherOptions[field.id].text"
+                    type="text"
                     placeholder="请说明其他选项内容"
                     class="mt-2"
                   />

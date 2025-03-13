@@ -202,11 +202,37 @@
                   {{ field.content }}
                 </div>
                 
+                <!-- 日期字段 -->
+                <div v-else-if="field.field_type === 'date'" class="text-gray-700 dark:text-gray-300">
+                  {{ formatDate(field.content) }}
+                </div>
+                
                 <!-- 图片字段 -->
                 <div v-else-if="field.field_type === 'image'">
                   <div class="mb-2 text-sm text-gray-500">
-                    <span>原始文件名: {{ field.original_filename }}</span>
-                    <span class="ml-4">文件大小: {{ formatFileSize(field.file_size) }}</span>
+                    <span v-if="field.original_filename">原始文件名: {{ field.original_filename }}</span>
+                    <span v-else>图片文件</span>
+                    <span v-if="field.file_size" class="ml-4">文件大小: {{ formatFileSize(field.file_size) }}</span>
+                  </div>
+                  <div v-if="field.content && field.content.startsWith('data:image/')">
+                    <!-- 显示base64图片 -->
+                    <img 
+                      :src="field.content" 
+                      class="max-w-full h-auto border rounded cursor-pointer max-h-48" 
+                      @click="openImagePreview(field.content, field.original_filename || '图片')"
+                    />
+                  </div>
+                  <div v-else-if="field.content && field.url" class="mt-2">
+                    <!-- 显示远程图片预览按钮 -->
+                    <el-button type="primary" size="small" @click="openImagePreview(getFullUrl(field.url), field.original_filename || '图片')">
+                      预览图片
+                    </el-button>
+                  </div>
+                  <div v-else-if="field.content" class="mt-2">
+                    <!-- 显示图片内容作为文本 -->
+                    <el-button type="primary" size="small" @click="openImagePreview(getFullUrl(field.content), field.original_filename || '图片')">
+                      预览图片
+                    </el-button>
                   </div>
                 </div>
                 
@@ -217,23 +243,75 @@
                       <el-icon class="text-2xl"><Document /></el-icon>
                     </div>
                     <div class="flex-1">
-                      <div class="font-medium">{{ field.original_filename }}</div>
+                      <div class="font-medium">{{ field.original_filename || getFileNameFromPath(field.content) }}</div>
                       <div class="text-sm text-gray-500">
-                        <span>{{ field.file_type }}</span>
-                        <span class="ml-3">{{ formatFileSize(field.file_size) }}</span>
+                        <span>{{ field.file_type || getFileTypeFromPath(field.content) }}</span>
+                        <span v-if="field.file_size" class="ml-3">{{ formatFileSize(field.file_size) }}</span>
                       </div>
+                    </div>
+                    <div v-if="field.url || field.content">
+                      <el-button type="primary" size="small" @click="downloadFile(getFullUrl(field.url || field.content), field.original_filename || getFileNameFromPath(field.content))">
+                        下载
+                      </el-button>
                     </div>
                   </div>
                 </div>
                 
                 <!-- 单选字段 -->
-                <div v-else-if="field.field_type === 'radio'">
+                <div v-else-if="field.field_type === 'radio' && !field.allow_multiple">
                   <div class="flex items-center">
-                    <el-tag type="success">{{ field.selected_label }}</el-tag>
-                    <div class="ml-3 text-gray-500 text-sm">
+                    <el-tag type="success">{{ field.selected_label || field.content }}</el-tag>
+                    <div v-if="field.selected_label && field.selected_label !== field.content" 
+                         class="ml-3 text-gray-500 text-sm">
                       (值: {{ field.content }})
                     </div>
                   </div>
+                </div>
+                  
+                <!-- 多选字段 -->
+                <div v-else-if="field.field_type === 'radio' && field.allow_multiple" class="flex flex-wrap gap-2">
+                  <!-- 使用API返回的selected_labels -->
+                  <template v-if="field.selected_labels && field.selected_labels.length">
+                    <el-tag v-for="(label, index) in field.selected_labels" :key="index" type="success" class="mr-2 mb-2">
+                      {{ label }}
+                    </el-tag>
+                  </template>
+                  <!-- 使用已解析的内容 -->
+                  <template v-else-if="field.parsed_content">
+                    <template v-for="(value, index) in field.parsed_content" :key="index">
+                      <!-- 尝试查找对应的标签 -->
+                      <el-tag v-if="getOptionLabel(field.options, value)" type="success" class="mr-2 mb-2">
+                        {{ getOptionLabel(field.options, value) }}
+                      </el-tag>
+                      <el-tag v-else type="info" class="mr-2 mb-2">
+                        {{ value }}
+                      </el-tag>
+                    </template>
+                  </template>
+                  <!-- 尝试解析JSON字符串 -->
+                  <template v-else-if="typeof field.content === 'string' && field.content.startsWith('[')">
+                    <template v-for="(value, index) in parseJsonArray(field.content)" :key="index">
+                      <!-- 尝试查找对应的标签 -->
+                      <el-tag v-if="getOptionLabel(field.options, value)" type="success" class="mr-2 mb-2">
+                        {{ getOptionLabel(field.options, value) }}
+                      </el-tag>
+                      <el-tag v-else type="info" class="mr-2 mb-2">
+                        {{ value }}
+                      </el-tag>
+                    </template>
+                  </template>
+                  <!-- 处理已经是数组的情况 -->
+                  <template v-else-if="Array.isArray(field.content)">
+                    <el-tag v-for="(value, index) in field.content" :key="index" type="info" class="mr-2 mb-2">
+                      {{ getOptionLabel(field.options, value) || value }}
+                    </el-tag>
+                  </template>
+                  <!-- 处理其他情况 -->
+                  <template v-else>
+                    <el-tag type="info">
+                      {{ field.content }}
+                    </el-tag>
+                  </template>
                 </div>
               </div>
             </div>
@@ -250,6 +328,19 @@
             </template>
           </div>
         </template>
+      </div>
+    </el-dialog>
+
+    <!-- 图片预览对话框 -->
+    <el-dialog
+      v-model="imagePreviewVisible"
+      :title="currentPreviewTitle"
+      width="80%"
+      destroy-on-close
+      center
+    >
+      <div class="flex justify-center">
+        <img :src="currentPreviewImage" class="max-w-full max-h-[70vh]" />
       </div>
     </el-dialog>
   </div>
@@ -281,6 +372,11 @@ const currentRegistration = ref(null)
 const formData = ref([])
 const enhancedData = ref<any>(null)
 
+// 图片预览
+const imagePreviewVisible = ref(false)
+const currentPreviewImage = ref('')
+const currentPreviewTitle = ref('')
+
 // 加载报名列表
 const loadRegistrations = async () => {
   try {
@@ -297,8 +393,22 @@ const loadRegistrations = async () => {
       { params }
     )
     
-    registrations.value = response.participants
-    total.value = response.total
+    // 根据截图，参与者列表API直接返回数据，不嵌套在data属性中
+    if (response) {
+      registrations.value = response.participants || []
+      total.value = response.total || 0
+      
+      console.log('获取到报名列表:', registrations.value.length, '条记录')
+      
+      // 如果API改变了结构，也能处理
+      if (!response.participants && response.data) {
+        registrations.value = response.data.participants || []
+        total.value = response.data.total || 0
+      }
+    } else {
+      registrations.value = []
+      total.value = 0
+    }
   } catch (error) {
     console.error('加载报名列表失败:', error)
     ElMessage.error('加载报名列表失败')
@@ -313,19 +423,25 @@ const loadRegistrationDetails = async (registrationId: number) => {
     detailsLoading.value = true
     enhancedData.value = null
     
-    // 获取报名详情
+    // 获取报名详情 - 可能直接返回数据
     const registrationData = await request.get(
       `/competitions/registrations/${registrationId}`
     )
-    currentRegistration.value = registrationData
     
-    // 获取表单数据
+    // 检查响应数据结构
+    currentRegistration.value = registrationData.data || registrationData
+    
+    console.log('获取到报名详情:', currentRegistration.value)
+    
+    // 获取表单数据 - 可能直接返回数据
     const formResponse = await request.get(
       `/forms/registrations/${registrationId}/data`
     )
-    formData.value = formResponse
     
-    // 使用增强的API获取更详细的信息
+    // 检查响应数据结构
+    formData.value = formResponse.data || formResponse || []
+    
+    // 使用增强的API获取更详细的信息 - 这个API返回嵌套在data中的数据
     try {
       const userId = currentRegistration.value?.user_id
       if (userId) {
@@ -333,10 +449,43 @@ const loadRegistrationDetails = async (registrationId: number) => {
           `/forms/admin/competitions/${competitionId}/users/${userId}/data`
         )
         
-        // 处理API响应
+        console.log('增强数据响应:', enhancedResponse)
+        
+        // 处理API响应 - 这个API的返回结构是 { data: { data: {...}, success: true, ... } }
         if (enhancedResponse?.data) {
-          enhancedData.value = enhancedResponse.data
+          // API可能返回两种结构
+          if (enhancedResponse.data.data) {
+            // 如果是嵌套的data.data结构
+            enhancedData.value = enhancedResponse.data.data
+          } else {
+            // 如果data下直接是数据
+            enhancedData.value = enhancedResponse.data
+          }
+          
           console.log('获取到增强的报名数据:', enhancedData.value)
+          
+          // 检查是否获取到了正确的数据
+          if (!enhancedData.value || !enhancedData.value.form_data) {
+            console.warn('增强数据格式不符合预期:', enhancedData.value)
+            return
+          }
+          
+          // 处理多选字段的JSON字符串
+          if (enhancedData.value?.form_data) {
+            enhancedData.value.form_data.forEach((field: any) => {
+              // 尝试解析多选字段的内容
+              if (field.field_type === 'radio' && field.allow_multiple && typeof field.content === 'string' && field.content.startsWith('[')) {
+                try {
+                  const parsedContent = JSON.parse(field.content)
+                  if (Array.isArray(parsedContent)) {
+                    field.parsed_content = parsedContent
+                  }
+                } catch (e) {
+                  console.error(`解析字段 ${field.field_id} 的内容失败:`, e)
+                }
+              }
+            })
+          }
         }
       }
     } catch (enhancedError) {
@@ -393,19 +542,36 @@ const handleViewDetails = (registration: any) => {
 
 // 下载文件
 const downloadFile = (url: string, filename: string) => {
-  window.open(url, '_blank')
+  // 确保URL是完整的URL
+  const fullUrl = getFullUrl(url)
+  window.open(fullUrl, '_blank')
+}
+
+// 图片预览
+const openImagePreview = (url: string, title?: string) => {
+  currentPreviewImage.value = url
+  currentPreviewTitle.value = title || '图片预览'
+  imagePreviewVisible.value = true
 }
 
 // 工具函数
 const formatDate = (date: string) => {
   if (!date) return '-'
-  return new Date(date).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  try {
+    const dateObj = new Date(date)
+    if (isNaN(dateObj.getTime())) return date // 如果日期无效，直接返回原始字符串
+    
+    return dateObj.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).replace(/\//g, '-')
+  } catch (e) {
+    return date // 发生错误时返回原始字符串
+  }
 }
 
 const getStatusType = (status: string) => {
@@ -431,7 +597,9 @@ const getFieldTypeLabel = (type: string) => {
     'text': '文本',
     'image': '图片',
     'file': '文件',
-    'radio': '单选'
+    'radio': '单选',
+    'date': '日期',
+    'textarea': '多行文本'
   }
   return typeLabels[type] || type
 }
@@ -464,6 +632,47 @@ const handleCurrentChange = (val: number) => {
 const handleSearch = () => {
   currentPage.value = 1
   loadRegistrations()
+}
+
+// 工具函数 - 解析JSON数组
+const parseJsonArray = (jsonStr: string) => {
+  try {
+    return JSON.parse(jsonStr)
+  } catch (e) {
+    console.error('解析JSON数组失败:', e)
+    return []
+  }
+}
+
+// 获取选项标签
+const getOptionLabel = (options: any[] | undefined, value: string) => {
+  if (!options) return null
+  const option = options.find(opt => opt.value === value)
+  return option ? option.label : null
+}
+
+// 工具函数 - 获取文件名
+const getFileNameFromPath = (path: string) => {
+  if (!path) return '未知文件'
+  return path.split('\\').pop()?.split('/').pop() || '文件'
+}
+
+// 工具函数 - 获取文件类型
+const getFileTypeFromPath = (path: string) => {
+  if (!path) return ''
+  const ext = path.split('.').pop()?.toLowerCase()
+  return ext ? `.${ext}` : ''
+}
+
+// 工具函数 - 获取完整URL
+const getFullUrl = (path: string) => {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+    return path
+  }
+  // 将相对路径转为完整URL - 使用API基础路径
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
+  return path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`
 }
 
 onMounted(() => {

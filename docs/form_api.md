@@ -429,7 +429,7 @@ const imageInput = document.querySelector('#image-input');
 formData.append('field_4', imageInput.files[0]);
 
 // 发送请求
-fetch('http://47.245.102.255:8000/forms/registrations/1/data', {
+fetch('http://localhost:8000/forms/registrations/1/data', {
   method: 'POST',
   headers: {
     'Authorization': `Bearer ${token}`
@@ -466,7 +466,7 @@ getBase64(imageFile).then(base64Image => {
   formData["3"] = base64Image;
   
   // 发送请求
-  fetch('http://47.245.102.255:8000/forms/registrations/1/data', {
+  fetch('http://localhost:8000/forms/registrations/1/data', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -482,7 +482,7 @@ getBase64(imageFile).then(base64Image => {
 
 ### 获取表单数据
 ```javascript
-fetch('http://47.245.102.255:8000/forms/registrations/1/data', {
+fetch('http://localhost:8000/forms/registrations/1/data', {
   method: 'GET',
   headers: {
     'Authorization': `Bearer ${token}`

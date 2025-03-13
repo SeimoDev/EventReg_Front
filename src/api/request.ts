@@ -5,7 +5,7 @@ import Cookies from 'js-cookie'
 const COOKIE_TOKEN_KEY = 'event_reg_token'
 
 const request = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://47.245.102.255:9988',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:9988',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
