@@ -151,14 +151,14 @@ Authorization: Bearer <your_token>
 ### 使用 curl 获取用户列表
 
 ```bash
-curl -X GET "http://47.245.102.255:9988/user/admin/users?page=1&per_page=10" \
+curl -X GET "http://localhost:7754/user/admin/users?page=1&per_page=10" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
 ```
 
 ### 使用 curl 重置用户密码
 
 ```bash
-curl -X POST "http://47.245.102.255:9988/user/admin/users/5/reset-password" \
+curl -X POST "http://localhost:7754/user/admin/users/5/reset-password" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
 ```
 

@@ -218,7 +218,7 @@ Authorization: Bearer <admin_token>
 ### 请求示例
 
 ```bash
-curl -X GET "http://47.245.102.255:8000/export/competition/5/files" \
+curl -X GET "http://localhost:8000/export/competition/5/files" \
      -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
      -o "活动附件.zip"
 ```

@@ -976,16 +976,224 @@ const fetchRegistrationFormInfo = async (competitionId: string | string[] | numb
   }
 };
 
-// 修改 fetchFormFields 函数，正确处理competitionId类型
+// 添加获取单个字段数据的方法
+const fetchFieldData = async (competitionId: string | number | string[], fieldId: number) => {
+  try {
+    // 确保competitionId是简单的字符串或数字
+    const id = Array.isArray(competitionId) ? competitionId[0] : competitionId;
+    console.log(`获取字段 ${fieldId} 的历史数据`);
+    const response = await request.get(`/forms/competitions/${id}/fields/${fieldId}/data`);
+    
+    // 输出原始响应
+    console.log(`字段 ${fieldId} 原始响应:`, JSON.stringify(response.data, null, 2));
+    
+    return response.data;
+  } catch (error) {
+    console.warn(`获取字段 ${fieldId} 数据失败:`, error);
+    return null;
+  }
+}
+
+// 添加获取所有字段历史数据的方法
+const fetchAllFieldsData = async () => {
+  if (!formFields.value || formFields.value.length === 0) {
+    console.warn('没有表单字段可加载数据');
+    return;
+  }
+
+  const competitionId = route.params.id;
+  if (!competitionId) {
+    console.error('无法获取竞赛ID');
+    return;
+  }
+
+  console.log('开始获取所有字段的历史数据，竞赛ID:', competitionId);
+  
+  // 显示加载中
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: '正在加载历史填写数据...',
+    background: 'rgba(0, 0, 0, 0.7)',
+  });
+
+  try {
+    // 为每个字段获取数据
+    for (const field of formFields.value) {
+      const fieldId = field.id;
+      console.log(`======= 处理字段 ${fieldId} (${field.field_label}) =======`);
+      
+      const fieldData = await fetchFieldData(competitionId, fieldId);
+      if (!fieldData) {
+        console.log(`字段 ${fieldId} 未获取到数据`);
+        continue;
+      }
+      
+      console.log(`字段 ${fieldId} (${field.field_label}) 类型: ${field.field_type}`);
+      console.log(`字段 ${fieldId} 返回数据:`, fieldData);
+      
+      // 根据字段类型处理不同的响应格式
+      if (field.field_type === 'text') {
+        // 文本字段 - 直接设置content值
+        if (fieldData.content !== undefined) {
+          formData.value[`field_${fieldId}`] = fieldData.content;
+          console.log(`设置文本字段 ${fieldId}: "${fieldData.content}"`);
+        }
+      } else if (field.field_type === 'radio') {
+        if (field.allow_multiple) {
+          // 多选字段 - 优先使用selected_values数组
+          try {
+            console.log(`多选字段 ${fieldId} 原始数据:`, {
+              content: fieldData.content,
+              selectedValues: fieldData.selected_values
+            });
+            
+            let selectedValues = fieldData.selected_values;
+            // 如果没有直接提供selected_values，尝试解析content
+            if (!selectedValues && fieldData.content) {
+              console.log(`多选字段 ${fieldId} 解析content:`, fieldData.content);
+              
+              try {
+                if (typeof fieldData.content === 'string') {
+                  console.log(`尝试解析JSON字符串: ${fieldData.content}`);
+                  selectedValues = JSON.parse(fieldData.content);
+                  console.log(`解析结果:`, selectedValues);
+                } else {
+                  console.log(`使用非字符串content:`, fieldData.content);
+                  selectedValues = fieldData.content;
+                }
+              } catch (e) {
+                console.error(`解析多选内容失败: ${fieldData.content}`, e);
+                // 如果解析失败且content是字符串，作为单个值处理
+                if (typeof fieldData.content === 'string') {
+                  console.log(`将字符串作为单个值处理: ${fieldData.content}`);
+                  selectedValues = [fieldData.content];
+                }
+              }
+            }
+            
+            if (Array.isArray(selectedValues)) {
+              // 设置多选值
+              multiSelectValues[fieldId] = selectedValues;
+              formData.value[`field_${fieldId}`] = selectedValues;
+              
+              // 检查是否有"other"选项
+              if (selectedValues.includes('other') && fieldData.other_text) {
+                otherOptions[fieldId] = { selected: true, text: fieldData.other_text };
+                console.log(`设置"其他"选项: ${fieldData.other_text}`);
+              }
+              
+              console.log(`最终多选字段 ${fieldId} 设置值:`, selectedValues);
+              
+              // 输出当前字段的选项信息，方便调试
+              const options = getRadioOptions(field);
+              console.log(`多选字段 ${fieldId} 有效选项:`, options);
+            } else {
+              console.warn(`多选字段 ${fieldId} 返回的数据不是数组:`, selectedValues);
+            }
+          } catch (e) {
+            console.error(`处理多选字段 ${fieldId} 内容失败:`, e);
+          }
+        } else {
+          // 单选字段 - 优先使用selected_value
+          console.log(`单选字段 ${fieldId} 原始数据:`, {
+            content: fieldData.content,
+            selectedValue: fieldData.selected_value
+          });
+          
+          const selectedValue = fieldData.selected_value || fieldData.content;
+          
+          if (selectedValue === 'other' && fieldData.other_text) {
+            // 选中"其他"并设置文本
+            formData.value[`field_${fieldId}`] = 'other';
+            otherOptions[fieldId] = { selected: true, text: fieldData.other_text };
+            console.log(`设置单选字段 ${fieldId} 为"其他": ${fieldData.other_text}`);
+          } else if (selectedValue !== undefined) {
+            formData.value[`field_${fieldId}`] = selectedValue;
+            console.log(`设置单选字段 ${fieldId} 值: "${selectedValue}"`);
+          }
+          
+          // 输出当前字段的选项信息，方便调试
+          const options = getRadioOptions(field);
+          console.log(`单选字段 ${fieldId} 有效选项:`, options);
+        }
+      } else if (field.field_type === 'date') {
+        // 日期字段
+        if (fieldData.content !== undefined) {
+          formData.value[`field_${fieldId}`] = fieldData.content;
+          console.log(`设置日期字段 ${fieldId}: "${fieldData.content}"`);
+        }
+      } else if (field.field_type === 'file' || field.field_type === 'image') {
+        // 文件字段
+        console.log(`文件字段 ${fieldId} 原始数据:`, {
+          content: fieldData.content,
+          url: fieldData.url
+        });
+        
+        const fileUrl = fieldData.url || fieldData.content;
+        if (fileUrl) {
+          formData.value[`field_${fieldId}`] = fileUrl;
+          
+          // 添加到文件列表
+          if (!fileList.value[fieldId]) {
+            fileList.value[fieldId] = [];
+          }
+          
+          fileList.value[fieldId] = [{
+            name: fieldData.field_label || fieldData.field_name || '文件',
+            url: fileUrl,
+            raw: null,
+            uid: Date.now().toString(),
+            size: 0,
+            status: 'success'
+          }];
+          
+          console.log(`设置文件字段 ${fieldId} URL: "${fileUrl}"`);
+        }
+      }
+      
+      console.log(`======= 字段 ${fieldId} 处理完成 =======\n`);
+    }
+    
+    // 多选字段处理完毕后，确保UI正确显示
+    nextTick(() => {
+      formFields.value.forEach(field => {
+        if (field.field_type === 'radio' && field.allow_multiple) {
+          const fieldId = field.id;
+          if (multiSelectValues[fieldId] && multiSelectValues[fieldId].length > 0) {
+            console.log(`确保多选字段 ${fieldId} UI更新:`, multiSelectValues[fieldId]);
+          }
+        }
+      });
+    });
+    
+    ElMessage.success('已加载历史填写数据');
+  } catch (error) {
+    console.error('获取历史数据失败:', error);
+    ElMessage.error('获取历史数据失败: ' + (error instanceof Error ? error.message : String(error)));
+  } finally {
+    loadingInstance.close();
+  }
+}
+
+// 修改fetchFormFields函数，在获取到表单字段后自动获取历史数据
 const fetchFormFields = async () => {
   const competitionId = route.params.id;
   if (!competitionId) {
     error.value = '比赛ID不能为空';
     ElMessage.error(error.value);
-      return;
-    }
+    return;
+  }
     
-  await fetchRegistrationFormInfo(competitionId);
+  const success = await fetchRegistrationFormInfo(competitionId);
+  
+  // 如果获取表单字段成功，尝试获取历史数据（无论是否为编辑模式）
+  if (success && formFields.value.length > 0) {
+    // 等待下一个渲染周期，确保表单字段已渲染
+    await nextTick();
+    
+    // 获取历史填写数据
+    await fetchAllFieldsData();
+  }
 };
 
 // 在组件挂载时获取表单字段

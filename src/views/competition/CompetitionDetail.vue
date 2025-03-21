@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 import request from '../../api/request'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Calendar, Trophy, Document } from '@element-plus/icons-vue'
+import { Calendar, Trophy, Document, Edit } from '@element-plus/icons-vue'
 
 interface Competition {
   id: number
@@ -68,7 +68,42 @@ const checkRegistrationStatus = async () => {
   }
 }
 
-// 开始报名流程
+// 获取操作按钮文本
+const getActionButtonText = () => {
+  // 未登录状态
+  if (!userStore.token) {
+    return '点击填写报名信息';
+  }
+  
+  // 已登录，根据报名状态显示不同文本
+  if (!registrationStatus.value) {
+    return '加载中...';
+  }
+  
+  // 已拒绝状态特殊处理，允许重新报名
+  if (registrationStatus.value.status === 'rejected') {
+    return '重新报名';
+  }
+  
+  // 审核中状态特殊处理，改为编辑按钮
+  if (registrationStatus.value.status === 'pending') {
+    return '编辑报名信息';
+  }
+  
+  // 已经报名过的情况，即使按钮是禁用的，也要显示状态
+  if (registrationStatus.value.registered || 
+      registrationStatus.value.status !== 'not_registered') {
+    switch (registrationStatus.value.status) {
+      case 'approved': return '已通过';
+      default: return '已报名';
+    }
+  }
+  
+  // 未报名状态
+  return '点击填写报名信息';
+}
+
+// 开始报名流程或编辑报名信息
 const startRegistration = async () => {
   if (registrationLoading.value) return; // 防止重复点击
   
@@ -90,6 +125,12 @@ const startRegistration = async () => {
       return
     }
     
+    // 如果状态是审核中，则跳转到编辑页面
+    if (registrationStatus.value && registrationStatus.value.status === 'pending') {
+      router.push(`/competition/${competitionId.value}/edit-registration`);
+      return;
+    }
+    
     // 安全检查：只有未报名或已拒绝状态才能继续报名过程
     if (registrationStatus.value && 
         registrationStatus.value.status !== 'not_registered' && 
@@ -97,7 +138,6 @@ const startRegistration = async () => {
       // 显示状态提示
       let statusText = '';
       switch (registrationStatus.value.status) {
-        case 'pending': statusText = '您的报名正在审核中'; break;
         case 'approved': statusText = '您的报名已通过'; break;
         default: statusText = '您已完成报名'; break;
       }
@@ -131,10 +171,11 @@ const canRegister = computed(() => {
     );
   }
   
-  // 检查报名状态 - 允许未报名和已拒绝的状态报名
+  // 检查报名状态 - 允许未报名、已拒绝和审核中的状态点击
   const registrationAllowed = 
     registrationStatus.value?.status === 'not_registered' || 
-    registrationStatus.value?.status === 'rejected'; // 允许未报名和已拒绝状态
+    registrationStatus.value?.status === 'rejected' ||
+    registrationStatus.value?.status === 'pending'; // 允许未报名、已拒绝和审核中状态点击
   
   const result = (
     competition.value.status === 'published' &&
@@ -168,35 +209,13 @@ const registrationStatusText = computed(() => {
   }
 })
 
-// 获取操作按钮文本
-const getActionButtonText = () => {
-  // 未登录状态
-  if (!userStore.token) {
-    return '点击填写报名信息';
+// 编辑报名信息
+const editRegistration = () => {
+  if (registrationStatus.value && registrationStatus.value.registration_id) {
+    router.push(`/competition/${competitionId.value}/edit-registration`);
+  } else {
+    ElMessage.error('无法找到报名信息');
   }
-  
-  // 已登录，根据报名状态显示不同文本
-  if (!registrationStatus.value) {
-    return '加载中...';
-  }
-  
-  // 已拒绝状态特殊处理，允许重新报名
-  if (registrationStatus.value.status === 'rejected') {
-    return '重新报名';
-  }
-  
-  // 已经报名过的情况，即使按钮是禁用的，也要显示状态
-  if (registrationStatus.value.registered || 
-      registrationStatus.value.status !== 'not_registered') {
-    switch (registrationStatus.value.status) {
-      case 'pending': return '审核中';
-      case 'approved': return '已通过';
-      default: return '已报名';
-    }
-  }
-  
-  // 未报名状态
-  return '点击填写报名信息';
 }
 
 onMounted(() => {

@@ -30,6 +30,12 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true }
       },
       {
+        path: 'competition/:id/edit-registration',
+        name: 'competitionEditRegistration',
+        component: () => import('../views/competition/EditRegistrationForm.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
         path: 'user/profile',
         name: 'userProfile',
         component: () => import('../views/user/Profile.vue'),
